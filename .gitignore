@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+.env
+.env.prod
+.env.*.local
+backup_*.sql.gz
+*.egg-info/
+dist/
+build/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Node
+node_modules/
+.next/
+out/
+.env.local
+npm-debug.log*
+
+# Docker
+postgres_data/
+
+# OS
+.DS_Store
+*.swp
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Claude local
+.claude/settings.local.json
+
+# Test artifacts
+catalog/backend/tests/fixtures/expected_vectors.json
+
+# Office temp
+~$*.xlsx
+/catalog/.git.old/

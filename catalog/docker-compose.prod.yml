@@ -1,0 +1,82 @@
+# Production stack for assetallocation.ru — hosted on a local machine, exposed via Cloudflare Tunnel.
+# Isolated from the dev stack via `name:` below (separate volumes/network), so prod and dev
+# never share the Postgres volume. No host ports published: all traffic enters through cloudflared.
+# NOTE: this network's ISP DPI blocked the tunnel before — run from a network that allows it.
+# Usage:
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+# First deploy — run migrations + seed (scripts run as modules, -m):
+#   docker compose -f docker-compose.prod.yml exec backend uv run alembic upgrade head
+#   docker compose -f docker-compose.prod.yml exec backend uv run python -m scripts.seed_admin
+#   docker compose -f docker-compose.prod.yml exec backend uv run python -m scripts.seed_catalog
+#   docker compose -f docker-compose.prod.yml exec backend uv run python -m scripts.seed_strategies
+
+name: astra-prod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: astra
+      POSTGRES_USER: astra
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U astra"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # no ports: — internal Docker network only
+
+  # Internal SMTP sink. Email (reset-password/registration) deferred; admin creates users.
+  # Kept so backend SMTP target resolves and nothing crashes. No host ports.
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    environment:
+      MP_MAX_MESSAGES: 200
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://astra:${POSTGRES_PASSWORD:?}@postgres:5432/astra
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env.prod}
+      COOKIE_SECURE: "true"
+      APP_URL: https://assetallocation.ru
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_TLS: "false"
+    # prod: no --reload, no source bind-mount (code lives in the image)
+    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+    # no ports: — reached only via frontend rewrites over the internal network
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_INTERNAL_URL: http://backend:8000
+    restart: unless-stopped
+    depends_on:
+      - backend
+    expose:
+      - "3000"
+    # no ports: — reached only through cloudflared
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?set TUNNEL_TOKEN in .env.prod}
+      # QUIC (UDP 7844) often blocked → http2 (TCP 7844). Drop this line to try QUIC.
+      TUNNEL_TRANSPORT_PROTOCOL: http2
+    depends_on:
+      - frontend
+
+volumes:
+  postgres_data:

@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: astra
+      POSTGRES_USER: astra
+      POSTGRES_PASSWORD: astra_dev
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U astra"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "1026:1025"   # SMTP (external 1026 → internal 1025)
+      - "8026:8025"   # Web UI (external 8026 → internal 8025)
+    environment:
+      MP_MAX_MESSAGES: 200
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8010:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://astra:astra_dev@postgres:5432/astra
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025        # internal Docker network port (unchanged)
+      SMTP_TLS: "false"
+    volumes:
+      - ./backend:/app
+      - backend_venv:/app/.venv      # isolate Docker linux venv from host darwin venv
+      - ./seed_data:/seed_data:ro
+    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # frontend запускается локально: cd frontend && npm run dev --port 3010
+  # в продакшене деплоится на Vercel
+
+volumes:
+  postgres_data:
+  backend_venv:

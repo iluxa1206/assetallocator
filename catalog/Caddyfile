@@ -1,0 +1,9 @@
+# Caddy reverse proxy for assetallocation.ru (RF VPS).
+# Auto-provisions Let's Encrypt TLS for the domains below (needs public ports 80+443
+# and A-records pointing to the VPS IP). Proxies everything to the Next.js frontend,
+# which itself rewrites /api/* → backend (same-origin, no CORS).
+
+assetallocation.ru, www.assetallocation.ru {
+	encode gzip
+	reverse_proxy frontend:3000
+}

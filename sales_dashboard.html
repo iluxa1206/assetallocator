@@ -1,0 +1,3029 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Подбор стратегии · Astra AM</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.cdnfonts.com/css/gilroy-bold');
+
+/* Светлая тема (по умолчанию) */
+:root {
+  --bg: #f5f6f8;
+  --bg-2: #eef0f4;
+  --surface: #ffffff;
+  --surface-2: #f9fafb;
+  --border: #e2e5ea;
+  --border-soft: #ecedf1;
+  --text: #1a1f2a;
+  --text-muted: #56606e;
+  --text-dim: #8892a1;
+  --accent: #a07a3d;          /* warmer, deeper gold for light bg */
+  --accent-2: #b8893f;
+  --accent-soft: rgba(160, 122, 61, 0.08);
+  --accent-border: rgba(160, 122, 61, 0.35);
+  --green: #058753;
+  --green-soft: rgba(5, 135, 83, 0.1);
+  --red: #c53030;
+  --red-soft: rgba(197, 48, 48, 0.08);
+  --blue: #2563eb;
+  --shadow: 0 1px 3px rgba(20, 25, 35, 0.06), 0 1px 2px rgba(20, 25, 35, 0.04);
+  --shadow-lg: 0 4px 16px rgba(20, 25, 35, 0.08);
+  --radius: 10px;
+  --radius-lg: 14px;
+
+  --chart-grid: rgba(60, 70, 90, 0.08);
+  --chart-text: #56606e;
+
+  --tooltip-bg: #ffffff;
+  --tooltip-border: #e2e5ea;
+  --tooltip-title: #1a1f2a;
+  --tooltip-body: #56606e;
+}
+
+/* Тёмная тема — hedge-fund стиль */
+:root[data-theme="dark"] {
+  --bg: #0e1116;
+  --bg-2: #161a22;
+  --surface: #1a1f2a;
+  --surface-2: #212834;
+  --border: #2a3140;
+  --border-soft: #232a36;
+  --text: #e8eaed;
+  --text-muted: #9aa3b2;
+  --text-dim: #6b7384;
+  --accent: #c9a96e;
+  --accent-2: #d4b67c;
+  --accent-soft: rgba(201, 169, 110, 0.08);
+  --accent-border: rgba(201, 169, 110, 0.3);
+  --green: #4ade80;
+  --green-soft: rgba(74, 222, 128, 0.1);
+  --red: #f87171;
+  --red-soft: rgba(248, 113, 113, 0.1);
+  --blue: #60a5fa;
+  --shadow: 0 2px 16px rgba(0,0,0,0.3);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.4);
+
+  --chart-grid: rgba(154, 163, 178, 0.08);
+  --chart-text: #9aa3b2;
+
+  --tooltip-bg: #1a1f2a;
+  --tooltip-border: #2a3140;
+  --tooltip-title: #e8eaed;
+  --tooltip-body: #9aa3b2;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: 'Gilroy', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-feature-settings: 'tnum' 1, 'ss01' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* === Сетка === */
+.app {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 24px 32px 60px;
+}
+
+/* === Хедер === */
+.brand-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0 24px;
+  border-bottom: 1px solid var(--border-soft);
+  margin-bottom: 32px;
+}
+.brand {
+  display: flex; align-items: center; gap: 12px;
+}
+.brand-mark {
+  width: 32px; height: 32px;
+  border: 1.5px solid var(--accent);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: -0.02em;
+}
+.brand-text {
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.brand-text b { color: var(--text); font-weight: 700; }
+.brand-meta {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  letter-spacing: 0.03em;
+}
+.brand-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Переключатель темы */
+.theme-toggle {
+  display: inline-flex;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+.theme-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.theme-btn:hover { color: var(--text); }
+.theme-btn.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+.theme-btn svg {
+  flex-shrink: 0;
+}
+
+/* === Заголовок страницы === */
+.page-head {
+  margin-bottom: 32px;
+}
+.page-head h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+.page-head p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  max-width: 640px;
+}
+
+/* === Шаги выбора (главная панель) === */
+.setup {
+  display: grid;
+  grid-template-columns: 1.2fr 1.5fr 1.5fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+@media (max-width: 1100px) {
+  .setup { grid-template-columns: 1fr; }
+}
+
+.step-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+  position: relative;
+  transition: border-color 0.2s;
+}
+.step-card:hover { border-color: var(--border); }
+.step-card .step-num {
+  position: absolute;
+  top: 16px; right: 18px;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+.step-card .step-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+.step-card h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  letter-spacing: -0.01em;
+}
+
+/* Сумма */
+.amount-input-wrap {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-2);
+  transition: border-color 0.15s;
+}
+.amount-input-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.amount-input-wrap input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 1.4rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 14px 16px;
+  outline: none;
+  letter-spacing: -0.01em;
+  width: 100%;
+  min-width: 0;
+}
+.amount-hint {
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+}
+
+/* Кнопки выбора валюты (вместо select) */
+.ccy-pills {
+  display: inline-flex;
+  gap: 4px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  margin-top: 10px;
+}
+.ccy-pill {
+  flex: 1;
+  padding: 7px 14px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.ccy-pill:hover { color: var(--text); }
+.ccy-pill.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+/* В period-bar — компактнее */
+.period-bar .ccy-pills {
+  margin-top: 0;
+  padding: 2px;
+}
+.period-bar .ccy-pill {
+  padding: 5px 10px;
+  font-size: 0.8rem;
+}
+
+/* Choice buttons (риск-профиль и валюта) */
+.choices {
+  display: grid;
+  gap: 8px;
+}
+.choice-btn {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  text-align: left;
+  color: var(--text);
+}
+.choice-btn:hover {
+  border-color: var(--accent-border);
+  background: var(--surface-2);
+}
+.choice-btn.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.choice-btn .choice-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.choice-btn .choice-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-weight: 400;
+}
+.choice-btn .choice-meta {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.choice-btn.active .choice-meta { color: var(--accent); }
+.choice-btn:disabled,
+.choice-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.step-card.inactive {
+  opacity: 0.55;
+}
+.step-card.inactive::after {
+  content: 'не применяется к базовому';
+  position: absolute;
+  bottom: 14px; left: 22px;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  font-style: italic;
+}
+.step-card.inactive-manual {
+  opacity: 0.5;
+  position: relative;
+}
+.step-card.inactive-manual::after {
+  content: 'ручной режим активен';
+  position: absolute;
+  bottom: 14px; left: 22px;
+  font-size: 0.72rem;
+  color: var(--accent);
+  font-style: italic;
+}
+/* inactive-manual перекрывает inactive (базовый), чтобы не было двух подписей */
+.step-card.inactive-manual.inactive::after {
+  content: 'ручной режим активен';
+  color: var(--accent);
+}
+
+/* === Sticky период === */
+.period-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.period-bar label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+.period-bar select {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+}
+.period-bar select:focus { border-color: var(--accent); }
+.period-summary {
+  margin-left: auto;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.period-summary b { color: var(--text); font-weight: 600; }
+
+/* === Главный экран результата === */
+.result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 900px) {
+  .result-grid { grid-template-columns: 1fr; }
+}
+
+.viz-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+.viz-card .viz-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 18px;
+}
+.viz-card h3 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+.viz-card .viz-subtitle {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.donut-wrap {
+  position: relative;
+  width: 100%;
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.donut-center {
+  position: absolute;
+  text-align: center;
+  pointer-events: none;
+}
+.donut-center .dc-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.donut-center .dc-label {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 2px;
+}
+.legend-list {
+  margin-top: 18px;
+  display: grid;
+  gap: 8px;
+}
+.legend-row {
+  display: grid;
+  grid-template-columns: 12px 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.85rem;
+  padding: 6px 0;
+}
+.legend-row .swatch {
+  width: 10px; height: 10px; border-radius: 2px;
+}
+.legend-row .legend-name { color: var(--text); font-weight: 500; }
+.legend-row .legend-name small {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--text-dim);
+  font-weight: 400;
+  margin-top: 1px;
+}
+.legend-row .legend-pct {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+}
+.legend-row .legend-amount {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+  min-width: 110px;
+}
+.legend-row-header {
+  margin-top: 4px;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 10px !important;
+}
+.legend-row-header .legend-name { font-weight: 600; }
+.legend-row-sub {
+  padding: 3px 0 3px 14px !important;
+  font-size: 0.8rem !important;
+  opacity: 0.85;
+}
+.legend-row-sub .swatch {
+  width: 8px !important; height: 8px !important;
+}
+.legend-row-sub .legend-name { font-weight: 400 !important; color: var(--text-muted) !important; }
+
+/* === KPI strip === */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+}
+.kpi .kpi-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+.kpi .kpi-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-top: 6px;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.kpi .kpi-value.pos { color: var(--green); }
+.kpi .kpi-value.neg { color: var(--red); }
+.kpi .kpi-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* === Export bar === */
+.export-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 22px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.export-bar-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.export-bar-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.export-bar-btns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.export-btn:hover {
+  background: var(--accent);
+  color: var(--surface);
+  border-color: var(--accent);
+}
+.export-btn svg { flex-shrink: 0; }
+
+/* === Manual portfolio bar + panel === */
+.manual-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 22px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.manual-bar.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.manual-bar-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.manual-bar-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.manual-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.manual-toggle-btn:hover {
+  background: var(--accent);
+  color: var(--surface);
+  border-color: var(--accent);
+}
+.manual-bar.active .manual-toggle-btn {
+  background: var(--accent);
+  color: var(--surface);
+  border-color: var(--accent);
+}
+.manual-toggle-btn svg { flex-shrink: 0; }
+
+.manual-panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  margin-bottom: 0;
+}
+.manual-panel.open {
+  max-height: 2000px;
+  margin-bottom: 16px;
+}
+.manual-panel-inner {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
+}
+.manual-note {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  background: var(--bg-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 11px 14px;
+  margin-bottom: 18px;
+  line-height: 1.55;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.manual-exit-btn {
+  flex-shrink: 0;
+  padding: 7px 14px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.manual-exit-btn:hover {
+  background: var(--accent);
+  color: var(--surface);
+  border-color: var(--accent);
+}
+.manual-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+}
+@media (max-width: 900px) {
+  .manual-grid { grid-template-columns: 1fr; }
+}
+.manual-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.manual-col-head h4 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.manual-total {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+  background: var(--bg-2);
+  color: var(--text);
+}
+.manual-total.ok { background: var(--green-soft); color: var(--green); }
+.manual-total.warn { background: var(--red-soft); color: var(--red); }
+.manual-reset-btn {
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s;
+}
+.manual-reset-btn:hover {
+  color: var(--text);
+  border-color: var(--border-strong, var(--text-dim));
+}
+.manual-auto-tag {
+  font-size: 0.74rem;
+  color: var(--text-dim);
+  font-style: italic;
+}
+.manual-list {
+  display: flex;
+  flex-direction: column;
+}
+.manual-row {
+  display: grid;
+  grid-template-columns: 1fr 86px 56px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.manual-row:last-child { border-bottom: none; }
+.manual-row .mr-name {
+  font-size: 0.84rem;
+  color: var(--text);
+  line-height: 1.3;
+}
+.manual-row .mr-name small {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin-top: 1px;
+}
+.manual-row input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+/* Read-only строки (композитный индекс — зеркало портфеля) */
+.manual-row.readonly input[type="range"] {
+  cursor: default;
+  accent-color: var(--text-dim);
+  opacity: 0.7;
+}
+.manual-row.readonly .mr-input {
+  background: transparent;
+  border-color: transparent;
+}
+.manual-row.readonly .mr-input input {
+  cursor: default;
+  color: var(--text-muted);
+}
+.manual-row .mr-input {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  transition: border-color 0.15s;
+}
+.manual-row .mr-input:focus-within { border-color: var(--accent); }
+.manual-row .mr-input input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.manual-row .mr-input span {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+/* === Модальное окно для шаблона письма === */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 720px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+}
+.modal-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-header h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 1.4rem;
+  cursor: pointer;
+  padding: 0 6px;
+  line-height: 1;
+}
+.modal-close:hover { color: var(--text); }
+.modal-body {
+  padding: 18px 22px;
+  overflow-y: auto;
+  flex: 1;
+}
+.modal-body textarea {
+  width: 100%;
+  min-height: 360px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-family: inherit;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--text);
+  resize: vertical;
+}
+.modal-body textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.modal-footer {
+  padding: 14px 22px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.modal-btn {
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.modal-btn-primary {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: var(--surface);
+}
+.modal-btn-primary:hover { opacity: 0.9; }
+.modal-btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.modal-btn-secondary:hover { background: var(--bg-2); }
+.copy-feedback {
+  font-size: 0.82rem;
+  color: var(--green);
+  margin-right: auto;
+  align-self: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.copy-feedback.show { opacity: 1; }
+
+/* === Print стили (для PDF через window.print) === */
+@media print {
+  body { background: white !important; color: black !important; }
+  .brand-bar, .toggle-bar, .export-bar, .period-bar, .modal-overlay,
+  .collapsible, .theme-toggle, .chart-controls { display: none !important; }
+  .app { max-width: 100% !important; padding: 12px 16px !important; }
+  .step-card, .viz-card, .kpi, .backtest-section {
+    background: white !important;
+    border: 1px solid #d1d5db !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+  /* В печати оставляем step-cards с выбранными значениями + диаграммы + KPI */
+  .setup, .result-grid { gap: 12px; }
+  .page-head h1 { font-size: 1.3rem !important; }
+  .page-head p { display: none; }
+  .donut-wrap { height: 220px !important; }
+  .step-card { padding: 14px !important; }
+  .step-card .step-num, .step-card .step-label { display: none; }
+  .step-card h3 { margin-bottom: 8px !important; font-size: 0.95rem !important; }
+  .choice-btn:not(.active) { display: none !important; }
+  .amount-input-wrap { border: none !important; padding: 0 !important; }
+  .amount-input-wrap input { font-size: 1.2rem !important; padding: 0 !important; background: white !important; color: black !important; }
+  .amount-input-wrap select { display: none !important; }
+  .amount-hint { display: none !important; }
+  .kpi-strip { gap: 8px !important; }
+  .kpi-value { font-size: 1.1rem !important; }
+}
+
+/* === Backtest section (отдельный блок: период + KPI) === */
+.backtest-section {
+  margin: 32px 0 16px;
+}
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.section-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+.section-header p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 4px 0 0 0;
+}
+
+/* === Раскрываемые секции === */
+.collapsible {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.collapsible-head {
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.collapsible-head:hover { background: var(--surface-2); }
+.collapsible-head .ch-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.collapsible-head .ch-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.collapsible-head .ch-chevron {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  transition: transform 0.25s;
+  display: inline-block;
+}
+.collapsible[data-open="true"] .ch-chevron {
+  transform: rotate(180deg);
+}
+.collapsible-body {
+  display: none;
+  padding: 8px 24px 24px;
+  border-top: 1px solid var(--border-soft);
+}
+.collapsible[data-open="true"] .collapsible-body { display: block; }
+
+/* === Чарт сравнения === */
+.chart-host {
+  position: relative;
+  height: 380px;
+  margin-top: 8px;
+}
+.chart-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding-top: 12px;
+}
+.toggle-pill {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-muted);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.toggle-pill:hover { border-color: var(--accent-border); color: var(--text); }
+.toggle-pill.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* === Таблица === */
+.table-scroll { overflow-x: auto; }
+
+/* Сравнительная таблица в блоке графика: метрики портфеля / индекса / инфляции */
+.compare-table-wrap {
+  margin-top: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+}
+.compare-table thead th {
+  background: var(--bg-2);
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 11px 16px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.compare-table thead th:first-child {
+  text-align: left;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.78rem;
+}
+.compare-table thead th .col-marker {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 2px;
+  margin-right: 7px;
+  vertical-align: 1px;
+}
+.compare-table tbody td {
+  padding: 11px 16px;
+  text-align: right;
+  border-bottom: 1px solid var(--border-soft);
+  white-space: nowrap;
+  color: var(--text);
+}
+.compare-table tbody tr:last-child td { border-bottom: none; }
+.compare-table tbody td:first-child {
+  text-align: left;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+.compare-table tbody td.empty { color: var(--text-dim); font-size: 0.82rem; }
+.compare-table .pos { color: var(--green); font-weight: 600; }
+.compare-table .neg { color: var(--red); font-weight: 600; }
+.compare-table .strong { font-weight: 600; }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  margin-top: 8px;
+}
+.data-table thead th {
+  background: var(--bg-2);
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 10px 14px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.data-table thead th:first-child { text-align: left; }
+.data-table tbody td {
+  padding: 12px 14px;
+  text-align: right;
+  border-bottom: 1px solid var(--border-soft);
+  white-space: nowrap;
+  color: var(--text);
+}
+.data-table tbody td:first-child { text-align: left; }
+.data-table tbody tr:hover { background: var(--surface-2); }
+.data-table .pos { color: var(--green); }
+.data-table .neg { color: var(--red); }
+.data-table .muted { color: var(--text-dim); font-size: 0.78rem; font-weight: 400; }
+.data-table .total-row {
+  background: var(--bg-2);
+  font-weight: 600;
+}
+.data-table .total-row td {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.data-table .fund-name {
+  font-weight: 500;
+}
+.data-table .fund-name .ck {
+  color: var(--text-dim);
+  font-weight: 400;
+  margin-left: 6px;
+  font-size: 0.78rem;
+}
+
+.section-note {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-top: 12px;
+  line-height: 1.6;
+}
+.section-note code {
+  background: var(--bg-2);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: inherit;
+  color: var(--text-muted);
+}
+.section-note b { color: var(--text); font-weight: 600; }
+.section-note sub { font-size: 0.7rem; }
+
+/* hide the slider handle for non-active period */
+input[type="range"] { accent-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Brand bar -->
+  <div class="brand-bar">
+    <div class="brand">
+      <div class="brand-mark">A</div>
+      <div>
+        <div class="brand-text"><b>Astra AM</b> · Sales Desk</div>
+      </div>
+    </div>
+    <div class="brand-right">
+      <div class="brand-meta" id="brandMeta">— · —</div>
+      <div class="theme-toggle" role="group" aria-label="Тема оформления">
+        <button class="theme-btn active" data-theme-set="light" aria-label="Светлая тема">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          <span>Светлая</span>
+        </button>
+        <button class="theme-btn" data-theme-set="dark" aria-label="Тёмная тема">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <span>Тёмная</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page head -->
+  <div class="page-head">
+    <h1>Подбор инвестиционной стратегии</h1>
+    <p>Введите сумму инвестиций клиента, выберите риск-профиль и валютный микс. Аллокация по фондам и динамика стратегии рассчитываются автоматически.</p>
+  </div>
+
+  <!-- Setup grid: amount + profile + currency -->
+  <div class="setup">
+
+    <!-- Step 1: amount -->
+    <div class="step-card">
+      <div class="step-num">01</div>
+      <div class="step-label">Шаг 1</div>
+      <h3>Сумма инвестиций</h3>
+      <div class="amount-input-wrap">
+        <input type="text" id="amountInput" inputmode="numeric" autocomplete="off" value="10 000 000">
+      </div>
+      <div class="ccy-pills" id="amountCurrencyPills" data-target="amountCcy">
+        <button type="button" class="ccy-pill active" data-ccy="RUB">₽ RUB</button>
+        <button type="button" class="ccy-pill" data-ccy="USD">$ USD</button>
+        <button type="button" class="ccy-pill" data-ccy="CNY">¥ CNY</button>
+      </div>
+      <div class="amount-hint" id="amountHint">10 000 000 ₽</div>
+    </div>
+
+    <!-- Step 2: risk profile -->
+    <div class="step-card">
+      <div class="step-num">02</div>
+      <div class="step-label">Шаг 2 · риск-профиль</div>
+      <h3>Профиль клиента</h3>
+      <div class="choices" id="riskChoices">
+        <button class="choice-btn" data-risk="base">
+          <div>
+            <div class="choice-title">Базовый</div>
+            <div class="choice-desc">Все 10 фондов поровну, по 10%</div>
+          </div>
+          <div class="choice-meta">универсальный</div>
+        </button>
+        <button class="choice-btn active" data-risk="cons">
+          <div>
+            <div class="choice-title">Консервативный</div>
+            <div class="choice-desc">Сохранение капитала, минимум волатильности</div>
+          </div>
+          <div class="choice-meta">низкий риск</div>
+        </button>
+        <button class="choice-btn" data-risk="agg">
+          <div>
+            <div class="choice-title">Агрессивный</div>
+            <div class="choice-desc">Максимизация доходности на горизонте</div>
+          </div>
+          <div class="choice-meta">высокий риск</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 3: currency strategy -->
+    <div class="step-card" data-step="3">
+      <div class="step-num">03</div>
+      <div class="step-label">Шаг 3 · валютная стратегия</div>
+      <h3>Распределение валют</h3>
+      <div class="choices" id="ccyChoices">
+        <button class="choice-btn" data-ccy="rub6040">
+          <div>
+            <div class="choice-title">Преимущественно в рублях</div>
+            <div class="choice-desc">Рубль · Валюта</div>
+          </div>
+          <div class="choice-meta">60 / 40</div>
+        </button>
+        <button class="choice-btn active" data-ccy="equal">
+          <div>
+            <div class="choice-title">Поровну</div>
+            <div class="choice-desc">Рубль · Валюта</div>
+          </div>
+          <div class="choice-meta">50 / 50</div>
+        </button>
+        <button class="choice-btn" data-ccy="val6040">
+          <div>
+            <div class="choice-title">Преимущественно в валюте</div>
+            <div class="choice-desc">Рубль · Валюта</div>
+          </div>
+          <div class="choice-meta">40 / 60</div>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Manual portfolio toggle bar + panel -->
+  <div class="manual-bar" id="manualBar">
+    <div class="manual-bar-text">
+      <div class="manual-bar-title">Индивидуальный портфель</div>
+      <div class="manual-bar-sub" id="manualBarSub">Доли фондов и бенчмарков рассчитываются автоматически по выбранной стратегии</div>
+    </div>
+    <button class="manual-toggle-btn" id="manualToggleBtn" onclick="toggleManualPanel()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      <span id="manualToggleLabel">Настроить портфель</span>
+    </button>
+  </div>
+
+  <div class="manual-panel" id="manualPanel">
+    <div class="manual-panel-inner">
+      <div class="manual-note">
+        <span>Задайте доли фондов вручную. Доли композитного индекса пересобираются автоматически из бенчмарков фондов. Ручной режим переопределяет выбранную стратегию — кнопки риск-профиля и валютной стратегии станут неактивны.</span>
+        <button class="manual-exit-btn" onclick="exitManualMode()">Вернуться к стратегии</button>
+      </div>
+      <div class="manual-grid">
+
+        <!-- Funds -->
+        <div class="manual-col">
+          <div class="manual-col-head">
+            <h4>Фонды Astra AM <span class="manual-total" id="manualFundsTotal">0%</span></h4>
+            <button class="manual-reset-btn" onclick="resetManualFunds()">Сбросить</button>
+          </div>
+          <div class="manual-list" id="manualFundsList"></div>
+        </div>
+
+        <!-- Indices -->
+        <div class="manual-col">
+          <div class="manual-col-head">
+            <h4>Композитный индекс <span class="manual-total" id="manualIdxTotal">0%</span></h4>
+            <span class="manual-auto-tag">рассчитывается автоматически</span>
+          </div>
+          <div class="manual-list" id="manualIdxList"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Result: two donuts (allocation + currency) -->
+  <div class="result-grid">
+
+    <div class="viz-card">
+      <div class="viz-head">
+        <h3>Аллокация по фондам</h3>
+        <div class="viz-subtitle" id="allocSubtitle">—</div>
+      </div>
+      <div class="donut-wrap">
+        <canvas id="donutAlloc"></canvas>
+        <div class="donut-center">
+          <div class="dc-value" id="donutAllocCenter">—</div>
+          <div class="dc-label">всего</div>
+        </div>
+      </div>
+      <div class="legend-list" id="allocLegend"></div>
+    </div>
+
+    <div class="viz-card">
+      <div class="viz-head">
+        <h3>Распределение по валютам</h3>
+        <div class="viz-subtitle" id="ccySubtitle">—</div>
+      </div>
+      <div class="donut-wrap">
+        <canvas id="donutCcy"></canvas>
+        <div class="donut-center">
+          <div class="dc-value" id="donutCcyCenter">—</div>
+          <div class="dc-label">валютный микс</div>
+        </div>
+      </div>
+      <div class="legend-list" id="ccyLegend"></div>
+    </div>
+
+  </div>
+
+  <!-- Export bar -->
+  <div class="export-bar">
+    <div class="export-bar-text">
+      <div class="export-bar-title">Выгрузить рекомендацию для клиента</div>
+      <div class="export-bar-sub">Текущая аллокация с диаграммами по фондам и валютам</div>
+    </div>
+    <div class="export-bar-btns">
+      <button class="export-btn" id="exportPdfBtn" title="PDF через диалог печати браузера">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        PDF
+      </button>
+      <button class="export-btn" id="exportXlsxBtn" title="Excel-таблица .xlsx">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
+        Excel
+      </button>
+      <button class="export-btn" id="exportEmailBtn" title="Шаблон письма для копирования">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        Шаблон письма
+      </button>
+    </div>
+  </div>
+
+  <!-- Backtest section header + period bar + KPIs -->
+  <div class="backtest-section">
+    <div class="section-header">
+      <div>
+        <h2>Бэктест стратегии</h2>
+        <p>Выбор периода и валюты расчёта · ключевые метрики по портфелю и индексу-бенчмарку</p>
+      </div>
+    </div>
+
+    <div class="period-bar">
+      <label>Период</label>
+      <select id="startDate"></select>
+      <span style="color:var(--text-dim);">—</span>
+      <select id="endDate"></select>
+      <label style="margin-left:6px;">Валюта расчёта</label>
+      <div class="ccy-pills" id="baseCurrencyPills" data-target="baseCurrency">
+        <button type="button" class="ccy-pill active" data-ccy="RUB">₽ RUB</button>
+        <button type="button" class="ccy-pill" data-ccy="USD">$ USD</button>
+        <button type="button" class="ccy-pill" data-ccy="CNY">¥ CNY</button>
+      </div>
+      <div class="period-summary" id="periodSummary"></div>
+    </div>
+
+    <!-- KPI strip -->
+    <div class="kpi-strip" id="kpiStrip"></div>
+  </div>
+
+  <!-- Collapsible: Chart -->
+  <div class="collapsible" id="collChart">
+    <div class="collapsible-head" onclick="toggleColl('collChart')">
+      <div>
+        <div class="ch-title">Историческая динамика стратегии</div>
+        <div class="ch-sub">График сравнения портфеля с композитным индексом и инфляцией</div>
+      </div>
+      <div class="ch-chevron">⌄</div>
+    </div>
+    <div class="collapsible-body">
+      <div class="chart-controls">
+        <button class="toggle-pill active" data-line="portfolio">Портфель</button>
+        <button class="toggle-pill active" data-line="benchmark">Индекс</button>
+        <button class="toggle-pill" data-line="inflation">Инфляция</button>
+      </div>
+      <div class="chart-host"><canvas id="mainChart"></canvas></div>
+      <div class="compare-table-wrap">
+        <table class="compare-table" id="compareTable"></table>
+      </div>
+      <div class="section-note">
+        Все ряды нормированы к 100 на стартовую дату. Композитный индекс собран из бенчмарков фондов пропорционально их долям. Инфляция — накопленный индекс CPI выбранной базовой валюты.
+      </div>
+    </div>
+  </div>
+
+  <!-- Collapsible: Components -->
+  <div class="collapsible" id="collComponents">
+    <div class="collapsible-head" onclick="toggleColl('collComponents')">
+      <div>
+        <div class="ch-title">Финансовый результат по фондам</div>
+        <div class="ch-sub">Вклад каждого фонда в общий результат портфеля</div>
+      </div>
+      <div class="ch-chevron">⌄</div>
+    </div>
+    <div class="collapsible-body">
+      <div class="table-scroll">
+        <table class="data-table" id="componentTable"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collapsible: FX -->
+  <div class="collapsible" id="collFx">
+    <div class="collapsible-head" onclick="toggleColl('collFx')">
+      <div>
+        <div class="ch-title">Влияние валютного курса</div>
+        <div class="ch-sub">Разделение результата на работу фондов и движение курсов</div>
+      </div>
+      <div class="ch-chevron">⌄</div>
+    </div>
+    <div class="collapsible-body">
+      <div class="table-scroll">
+        <table class="data-table" id="fxTable"></table>
+      </div>
+      <div class="section-note" id="fxNote"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Модальное окно для шаблона письма -->
+<div class="modal-overlay" id="emailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Шаблон письма для клиента</h3>
+      <button class="modal-close" onclick="closeEmailModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <textarea id="emailTextarea" spellcheck="false"></textarea>
+    </div>
+    <div class="modal-footer">
+      <span class="copy-feedback" id="copyFeedback">Скопировано в буфер обмена</span>
+      <button class="modal-btn modal-btn-secondary" onclick="closeEmailModal()">Закрыть</button>
+      <button class="modal-btn modal-btn-primary" onclick="copyEmailTemplate()">Копировать</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const FUNDS = {"R5": {"meta": {"name": "Хедж-фонд Р5", "desc": "рублёвый фонд", "benchmark": "RGBITR", "benchmark_label": "RGBITR", "currency": "RUB"}, "series": [{"date": "2021-12-31", "price": 798.7783644145449}, {"date": "2022-01-31", "price": 789.9378059702827}, {"date": "2022-02-28", "price": 820.4854980234562}, {"date": "2022-03-31", "price": 932.2373152782916}, {"date": "2022-04-30", "price": 1009.720741906801}, {"date": "2022-05-05", "price": 999.9999999999999}, {"date": "2022-05-31", "price": 1043.65121}, {"date": "2022-06-30", "price": 1072.96728}, {"date": "2022-07-31", "price": 1085.13129}, {"date": "2022-08-31", "price": 1093.58353}, {"date": "2022-09-30", "price": 1104.71952}, {"date": "2022-10-31", "price": 1102.20974}, {"date": "2022-11-30", "price": 1111.45109}, {"date": "2022-12-31", "price": 1118.3898100000001}, {"date": "2023-01-31", "price": 1122.78165}, {"date": "2023-02-28", "price": 1127.51567}, {"date": "2023-03-31", "price": 1141.49483}, {"date": "2023-04-30", "price": 1139.2940700000001}, {"date": "2023-05-31", "price": 1148.00257}, {"date": "2023-06-30", "price": 1169.43}, {"date": "2023-07-31", "price": 1204.61}, {"date": "2023-08-31", "price": 1250.87}, {"date": "2023-09-30", "price": 1291.57}, {"date": "2023-10-31", "price": 1312.67}, {"date": "2023-11-30", "price": 1304.22}, {"date": "2023-12-31", "price": 1341.03}, {"date": "2024-01-31", "price": 1352.1}, {"date": "2024-02-29", "price": 1375.72}, {"date": "2024-03-31", "price": 1411.65}, {"date": "2024-04-30", "price": 1443.99}, {"date": "2024-05-31", "price": 1509.91}, {"date": "2024-06-30", "price": 1543.87}, {"date": "2024-07-31", "price": 1585.14}, {"date": "2024-08-31", "price": 1615.36}, {"date": "2024-09-30", "price": 1667.55}, {"date": "2024-10-31", "price": 1750.0}, {"date": "2024-11-30", "price": 1700.46}, {"date": "2024-12-31", "price": 1739.95}, {"date": "2025-01-31", "price": 1679.28}, {"date": "2025-02-28", "price": 1790.85}, {"date": "2025-03-31", "price": 1871.88}, {"date": "2025-04-30", "price": 1771.15}, {"date": "2025-05-31", "price": 1834.88}, {"date": "2025-06-30", "price": 2050.63}, {"date": "2025-07-31", "price": 2200.46}, {"date": "2025-08-31", "price": 2267.2}, {"date": "2025-09-30", "price": 2027.34}, {"date": "2025-10-31", "price": 2104.95}, {"date": "2025-11-30", "price": 2203.92}, {"date": "2025-12-31", "price": 2217.32}, {"date": "2026-01-31", "price": 2117.87}, {"date": "2026-02-28", "price": 2185.54}, {"date": "2026-03-31", "price": 2204.25}, {"date": "2026-04-30", "price": 2226.35}]}, "D5": {"meta": {"name": "Хедж-фонд Д5", "desc": "долларовый фонд облигаций", "benchmark": "CbondsZO_RUB", "benchmark_label": "Cbonds ЗО (RUB)", "currency": "USD"}, "series": [{"date": "2021-12-31", "price": 640.4604573984}, {"date": "2022-01-31", "price": 660.0881965698}, {"date": "2022-02-28", "price": 720.6787503405001}, {"date": "2022-03-31", "price": 785.6317262342999}, {"date": "2022-04-30", "price": 789.2096725040001}, {"date": "2022-05-05", "price": 768.5795052799999}, {"date": "2022-05-31", "price": 751.1687967749999}, {"date": "2022-06-30", "price": 702.76972392}, {"date": "2022-07-31", "price": 853.535301261}, {"date": "2022-08-31", "price": 819.1770117829999}, {"date": "2022-09-30", "price": 744.43360777}, {"date": "2022-10-31", "price": 766.018348352}, {"date": "2022-11-30", "price": 787.1682630239999}, {"date": "2022-12-31", "price": 870.074875}, {"date": "2023-01-31", "price": 861.6052928239379}, {"date": "2023-02-28", "price": 927.2115995582429}, {"date": "2023-03-31", "price": 945.467057096402}, {"date": "2023-04-19", "price": 996.4011970639999}, {"date": "2023-04-30", "price": 992.203053944}, {"date": "2023-05-31", "price": 1004.4160511440001}, {"date": "2023-06-30", "price": 1122.73989}, {"date": "2023-07-31", "price": 1149.055929}, {"date": "2023-08-31", "price": 1260.497862}, {"date": "2023-09-30", "price": 1356.012624}, {"date": "2023-10-31", "price": 1334.314485}, {"date": "2023-11-30", "price": 1303.9297470000001}, {"date": "2023-12-31", "price": 1348.0151489999998}, {"date": "2024-01-31", "price": 1342.009161}, {"date": "2024-02-29", "price": 1384.4688440000002}, {"date": "2024-03-31", "price": 1439.06228}, {"date": "2024-04-30", "price": 1455.616526}, {"date": "2024-05-31", "price": 1438.386138}, {"date": "2024-06-30", "price": 1368.53808}, {"date": "2024-07-31", "price": 1330.88}, {"date": "2024-08-31", "price": 1361.16}, {"date": "2024-09-30", "price": 1423.97}, {"date": "2024-10-31", "price": 1488.28}, {"date": "2024-11-30", "price": 1663.41}, {"date": "2024-12-31", "price": 1616.5}, {"date": "2025-01-31", "price": 1487.36}, {"date": "2025-02-28", "price": 1486.74}, {"date": "2025-03-31", "price": 1466.49}, {"date": "2025-04-30", "price": 1344.83}, {"date": "2025-05-31", "price": 1337.27}, {"date": "2025-06-30", "price": 1429.86}, {"date": "2025-07-31", "price": 1570.07}, {"date": "2025-08-31", "price": 1608.67}, {"date": "2025-09-30", "price": 1480.03}, {"date": "2025-10-31", "price": 1476.7}, {"date": "2025-11-30", "price": 1464.69}, {"date": "2025-12-31", "price": 1482.6}, {"date": "2026-01-31", "price": 1390.81}, {"date": "2026-02-28", "price": 1407.51}, {"date": "2026-03-31", "price": 1466.68}, {"date": "2026-04-30", "price": 1385.9}]}, "Yu5": {"meta": {"name": "Хедж-фонд Ю5", "desc": "юаневый фонд облигаций", "benchmark": "RUCNYTR_RUB", "benchmark_label": "RUCNYTR (RUB)", "currency": "CNY"}, "series": [{"date": "2021-12-31", "price": 1000.3547025247636}, {"date": "2022-01-31", "price": 1044.7485105309834}, {"date": "2022-02-28", "price": 1161.674971002749}, {"date": "2022-03-31", "price": 1149.970372776494}, {"date": "2022-04-30", "price": 927.1476056683537}, {"date": "2022-05-05", "price": 873.8067378947269}, {"date": "2022-05-31", "price": 808.8551818733195}, {"date": "2022-06-30", "price": 700.3208585688832}, {"date": "2022-07-31", "price": 796.5188256100528}, {"date": "2022-08-31", "price": 740.6082393345275}, {"date": "2022-09-30", "price": 693.2263865586585}, {"date": "2022-10-31", "price": 717.3868628389665}, {"date": "2022-11-30", "price": 722.9360888397439}, {"date": "2022-12-31", "price": 846.8940371972926}, {"date": "2023-01-31", "price": 888.3922196689024}, {"date": "2023-02-28", "price": 916.1779113803965}, {"date": "2023-03-31", "price": 953.8603221481465}, {"date": "2023-04-19", "price": 1000.0}, {"date": "2023-04-30", "price": 987.4669015200001}, {"date": "2023-05-31", "price": 975.98559183}, {"date": "2023-06-30", "price": 1064.8682}, {"date": "2023-07-31", "price": 1124.92664}, {"date": "2023-08-31", "price": 1150.294915}, {"date": "2023-09-30", "price": 1167.71841}, {"date": "2023-10-31", "price": 1188.1182600000002}, {"date": "2023-11-30", "price": 1188.28638}, {"date": "2023-12-31", "price": 1213.5171400000002}, {"date": "2024-01-31", "price": 1182.11016}, {"date": "2024-02-29", "price": 1194.8226}, {"date": "2024-03-31", "price": 1153.3840050000001}, {"date": "2024-04-30", "price": 1179.264}, {"date": "2024-05-31", "price": 1243.69778}, {"date": "2024-06-30", "price": 1322.4789600000001}, {"date": "2024-07-31", "price": 1405.4260000000002}, {"date": "2024-08-31", "price": 1460.2627499999999}, {"date": "2024-09-30", "price": 1573.59426}, {"date": "2024-10-31", "price": 1547.70565}, {"date": "2024-11-30", "price": 1504.8622599999999}, {"date": "2024-12-31", "price": 1425.17988}, {"date": "2025-01-31", "price": 1355.9296}, {"date": "2025-02-28", "price": 1414.5691}, {"date": "2025-03-31", "price": 1412.1491999999998}, {"date": "2025-04-30", "price": 1306.94261}, {"date": "2025-05-31", "price": 1342.3956}, {"date": "2025-06-30", "price": 1497.23118}, {"date": "2025-07-31", "price": 1605.78096}, {"date": "2025-08-31", "price": 1690.339875}, {"date": "2025-09-30", "price": 1485.372555}, {"date": "2025-10-31", "price": 1466.58109}, {"date": "2025-11-30", "price": 1550.318995}, {"date": "2025-12-31", "price": 1544.0162249999998}, {"date": "2026-01-31", "price": 1462.69}, {"date": "2026-02-28", "price": 1514.3539500000002}, {"date": "2026-03-31", "price": 1585.0701399999998}, {"date": "2026-04-30", "price": 1501.8317749999999}]}, "D1": {"meta": {"name": "Хедж-фонд Д1", "desc": "долларовый фонд облигаций", "benchmark": "CbondsZO_RUB", "benchmark_label": "Cbonds ЗО (RUB)", "currency": "USD"}, "series": [{"date": "2021-12-31", "price": 833.5370972838143}, {"date": "2022-01-31", "price": 806.114604659726}, {"date": "2022-02-28", "price": 865.483375792729}, {"date": "2022-03-31", "price": 871.0420438651705}, {"date": "2022-04-30", "price": 657.9198289556336}, {"date": "2022-05-05", "price": 643.0270859837527}, {"date": "2022-05-31", "price": 618.9062604032672}, {"date": "2022-06-30", "price": 555.0551772266638}, {"date": "2022-07-31", "price": 690.8606130208394}, {"date": "2022-08-31", "price": 666.9939127420056}, {"date": "2022-09-30", "price": 586.0026451561414}, {"date": "2022-10-31", "price": 611.4624166094901}, {"date": "2022-11-30", "price": 640.0751793376894}, {"date": "2022-12-31", "price": 736.789567754807}, {"date": "2023-01-31", "price": 738.4456675015817}, {"date": "2023-02-28", "price": 788.5807444893533}, {"date": "2023-03-31", "price": 781.6957548505314}, {"date": "2023-04-30", "price": 826.5066586215055}, {"date": "2023-05-31", "price": 848.7882455301457}, {"date": "2023-06-30", "price": 922.5433655925154}, {"date": "2023-07-31", "price": 954.6101457380457}, {"date": "2023-08-08", "price": 994.63804}, {"date": "2023-08-31", "price": 1021.636395}, {"date": "2023-09-30", "price": 1044.285584}, {"date": "2023-10-31", "price": 1055.51642}, {"date": "2023-11-30", "price": 1050.610062}, {"date": "2023-12-31", "price": 1066.393887}, {"date": "2024-01-31", "price": 1082.179044}, {"date": "2024-02-29", "price": 1109.7799360000001}, {"date": "2024-03-31", "price": 1141.64376}, {"date": "2024-04-30", "price": 1144.485377}, {"date": "2024-05-31", "price": 1107.970346}, {"date": "2024-06-30", "price": 1032.40592}, {"date": "2024-07-31", "price": 988.49}, {"date": "2024-08-31", "price": 1009.28}, {"date": "2024-09-30", "price": 1044.12}, {"date": "2024-10-31", "price": 1047.92}, {"date": "2024-11-30", "price": 1188.67}, {"date": "2024-12-31", "price": 1201.62}, {"date": "2025-01-31", "price": 1154.03}, {"date": "2025-02-28", "price": 1139.33}, {"date": "2025-03-31", "price": 1134.59}, {"date": "2025-04-30", "price": 1104.22}, {"date": "2025-05-31", "price": 1079.17}, {"date": "2025-06-30", "price": 1089.8}, {"date": "2025-07-31", "price": 1173.82}, {"date": "2025-08-31", "price": 1193.17}, {"date": "2025-09-30", "price": 1186.8}, {"date": "2025-10-31", "price": 1157.51}, {"date": "2025-11-30", "price": 1122.71}, {"date": "2025-12-31", "price": 1163.95}, {"date": "2026-01-31", "price": 1155.67}, {"date": "2026-02-28", "price": 1114.31}, {"date": "2026-03-31", "price": 1169.23}, {"date": "2026-04-30", "price": 1088.27}]}, "VO": {"meta": {"name": "Валютные облигации с выплатой дохода", "desc": "долларовый фонд облигаций", "benchmark": "CbondsZO_RUB", "benchmark_label": "Cbonds ЗО (RUB)", "currency": "USD"}, "series": [{"date": "2021-12-31", "price": 835.2236428053324}, {"date": "2022-01-31", "price": 807.7456646098461}, {"date": "2022-02-28", "price": 867.2345601325119}, {"date": "2022-03-31", "price": 872.8044753909198}, {"date": "2022-04-30", "price": 659.2510375421007}, {"date": "2022-05-05", "price": 644.3281611915804}, {"date": "2022-05-31", "price": 620.1585305003318}, {"date": "2022-06-30", "price": 556.178253603705}, {"date": "2022-07-31", "price": 692.2584726682148}, {"date": "2022-08-31", "price": 668.3434814655578}, {"date": "2022-09-30", "price": 587.188339398193}, {"date": "2022-10-31", "price": 612.6996251316659}, {"date": "2022-11-30", "price": 641.3702817760386}, {"date": "2022-12-31", "price": 738.2803582065426}, {"date": "2023-01-31", "price": 739.9398088391029}, {"date": "2023-02-28", "price": 790.1763271302551}, {"date": "2023-03-31", "price": 783.2774066796208}, {"date": "2023-04-30", "price": 828.178979035492}, {"date": "2023-05-31", "price": 850.5056496131562}, {"date": "2023-06-30", "price": 924.4100028264385}, {"date": "2023-07-31", "price": 956.5416656084108}, {"date": "2023-08-31", "price": 993.1482013399706}, {"date": "2023-09-30", "price": 1024.213679446018}, {"date": "2023-10-31", "price": 995.3633519871654}, {"date": "2023-11-01", "price": 992.0036279999999}, {"date": "2023-11-30", "price": 983.946987}, {"date": "2023-12-31", "price": 996.437013}, {"date": "2024-01-31", "price": 991.1045700000001}, {"date": "2024-02-29", "price": 1004.130356}, {"date": "2024-03-31", "price": 1027.1099199999999}, {"date": "2024-04-30", "price": 1019.665801}, {"date": "2024-05-31", "price": 975.983603}, {"date": "2024-06-30", "price": 927.7933600000001}, {"date": "2024-07-31", "price": 895.29}, {"date": "2024-08-31", "price": 894.42}, {"date": "2024-09-30", "price": 907.48}, {"date": "2024-10-31", "price": 898.4}, {"date": "2024-11-30", "price": 1056.3}, {"date": "2024-12-31", "price": 1047.4}, {"date": "2025-01-31", "price": 1006.85}, {"date": "2025-02-28", "price": 958.15}, {"date": "2025-03-31", "price": 922.09}, {"date": "2025-04-30", "price": 892.83}, {"date": "2025-05-31", "price": 866.41}, {"date": "2025-06-30", "price": 861.04}, {"date": "2025-07-31", "price": 899.67}, {"date": "2025-08-31", "price": 901.43}, {"date": "2025-09-30", "price": 902.21}, {"date": "2025-10-31", "price": 880.17}, {"date": "2025-11-30", "price": 850.92}, {"date": "2025-12-31", "price": 852.07}, {"date": "2026-01-31", "price": 842.48}, {"date": "2026-02-28", "price": 837.92}, {"date": "2026-03-31", "price": 878.45}, {"date": "2026-04-30", "price": 824.36}]}, "Aplus": {"meta": {"name": "Хедж-фонд А+", "desc": "рублёвый фонд акций", "benchmark": "MCFTR", "benchmark_label": "MCFTR", "currency": "RUB"}, "series": [{"date": "2021-12-31", "price": 692.7402}, {"date": "2022-01-31", "price": 649.1675}, {"date": "2022-02-28", "price": 454.2745}, {"date": "2022-03-31", "price": 497.1248}, {"date": "2022-04-30", "price": 449.6212}, {"date": "2022-05-05", "price": 443.249}, {"date": "2022-05-31", "price": 434.21}, {"date": "2022-06-30", "price": 432.73}, {"date": "2022-07-31", "price": 464.05}, {"date": "2022-08-31", "price": 490.79}, {"date": "2022-09-30", "price": 426.43}, {"date": "2022-10-31", "price": 476.86}, {"date": "2022-11-30", "price": 472.17}, {"date": "2022-12-31", "price": 461.66}, {"date": "2023-01-31", "price": 490.6}, {"date": "2023-02-28", "price": 491.28}, {"date": "2023-03-31", "price": 507.48}, {"date": "2023-04-30", "price": 529.99}, {"date": "2023-05-31", "price": 547.63}, {"date": "2023-06-30", "price": 581.51}, {"date": "2023-07-31", "price": 670.34}, {"date": "2023-08-31", "price": 729.23}, {"date": "2023-09-30", "price": 694.42}, {"date": "2023-10-31", "price": 703.15}, {"date": "2023-11-30", "price": 701.15}, {"date": "2023-12-31", "price": 713.99}, {"date": "2024-01-31", "price": 806.34}, {"date": "2024-02-29", "price": 881.78}, {"date": "2024-03-31", "price": 922.81}, {"date": "2024-04-30", "price": 976.79}, {"date": "2024-05-21", "price": 1000.0}, {"date": "2024-05-31", "price": 968.4}, {"date": "2024-06-30", "price": 967.11}, {"date": "2024-07-31", "price": 975.79}, {"date": "2024-08-31", "price": 970.26}, {"date": "2024-09-30", "price": 1027.24}, {"date": "2024-10-31", "price": 1021.44}, {"date": "2024-11-30", "price": 1038.02}, {"date": "2024-12-31", "price": 1105.18}, {"date": "2025-01-31", "price": 1184.42}, {"date": "2025-02-28", "price": 1281.39}, {"date": "2025-03-31", "price": 1240.67}, {"date": "2025-04-30", "price": 1158.14}, {"date": "2025-05-31", "price": 1118.5}, {"date": "2025-06-30", "price": 1151.56}, {"date": "2025-07-31", "price": 1191.51}, {"date": "2025-08-31", "price": 1217.64}, {"date": "2025-09-30", "price": 1133.46}, {"date": "2025-10-31", "price": 1088.96}, {"date": "2025-11-30", "price": 1101.23}, {"date": "2025-12-31", "price": 1209.48}, {"date": "2026-01-31", "price": 1334.15}, {"date": "2026-02-28", "price": 1396.38}, {"date": "2026-03-31", "price": 1296.72}, {"date": "2026-04-30", "price": 1285.14}]}, "A12080": {"meta": {"name": "Российские акции 120/80", "desc": "фонд российских акций", "benchmark": "MCFTR", "benchmark_label": "MCFTR", "currency": "RUB"}, "series": [{"date": "2021-12-31", "price": 779.4344}, {"date": "2022-01-31", "price": 730.4088}, {"date": "2022-02-28", "price": 511.1255}, {"date": "2022-03-31", "price": 559.3384}, {"date": "2022-04-30", "price": 505.8899}, {"date": "2022-05-05", "price": 498.7202}, {"date": "2022-05-31", "price": 488.55}, {"date": "2022-06-30", "price": 486.8827518416}, {"date": "2022-07-31", "price": 522.1164809146408}, {"date": "2022-08-31", "price": 552.2000517376517}, {"date": "2022-09-30", "price": 479.7957589320102}, {"date": "2022-10-31", "price": 536.5259528583205}, {"date": "2022-11-30", "price": 531.2493795136429}, {"date": "2022-12-31", "price": 519.4289078041091}, {"date": "2023-01-31", "price": 551.9889265451656}, {"date": "2023-02-28", "price": 552.7557191117437}, {"date": "2023-03-31", "price": 570.9818086061725}, {"date": "2023-04-30", "price": 596.306112189103}, {"date": "2023-05-31", "price": 616.1614536114934}, {"date": "2023-06-30", "price": 654.2774144742975}, {"date": "2023-07-31", "price": 754.2256056522044}, {"date": "2023-08-31", "price": 820.4867857230263}, {"date": "2023-09-30", "price": 781.3152811719106}, {"date": "2023-10-31", "price": 791.1369864050446}, {"date": "2023-11-30", "price": 788.8822973489863}, {"date": "2023-12-31", "price": 803.3388906058238}, {"date": "2024-01-31", "price": 907.245769447262}, {"date": "2024-02-29", "price": 992.1234393283311}, {"date": "2024-03-31", "price": 1038.2792100770446}, {"date": "2024-04-30", "price": 1099.0239342839009}, {"date": "2024-05-31", "price": 1071.0037607316347}, {"date": "2024-06-30", "price": 1078.4633487777535}, {"date": "2024-07-31", "price": 1042.6856239242777}, {"date": "2024-08-31", "price": 993.1072884943201}, {"date": "2024-09-10", "price": 1000.0}, {"date": "2024-09-30", "price": 1072.18}, {"date": "2024-10-31", "price": 1025.71}, {"date": "2024-11-30", "price": 1055.3}, {"date": "2024-12-31", "price": 1153.5}, {"date": "2025-01-31", "price": 1239.6}, {"date": "2025-02-28", "price": 1350.1}, {"date": "2025-03-31", "price": 1305.37}, {"date": "2025-04-30", "price": 1213.49}, {"date": "2025-05-31", "price": 1190.08}, {"date": "2025-06-30", "price": 1243.73}, {"date": "2025-07-31", "price": 1279.32}, {"date": "2025-08-31", "price": 1327.07}, {"date": "2025-09-30", "price": 1238.58}, {"date": "2025-10-31", "price": 1201.95}, {"date": "2025-11-30", "price": 1220.27}, {"date": "2025-12-31", "price": 1320.76}, {"date": "2026-01-31", "price": 1409.35}, {"date": "2026-02-28", "price": 1463.53}, {"date": "2026-03-31", "price": 1372.39}, {"date": "2026-04-30", "price": 1348.53}]}, "R1": {"meta": {"name": "Облигации Р1", "desc": "рублёвый фонд облигаций", "benchmark": "RGBITR", "benchmark_label": "RGBITR", "currency": "RUB"}, "series": [{"date": "2021-12-31", "price": 920.3664112607481}, {"date": "2022-01-31", "price": 881.212839999376}, {"date": "2022-02-28", "price": 747.5382718746587}, {"date": "2022-03-31", "price": 810.4118225371016}, {"date": "2022-04-30", "price": 878.6379738143911}, {"date": "2022-05-05", "price": 874.0500304302368}, {"date": "2022-05-31", "price": 903.9652939248764}, {"date": "2022-06-30", "price": 948.4558605514896}, {"date": "2022-07-31", "price": 964.7789516393315}, {"date": "2022-08-31", "price": 962.4225589488306}, {"date": "2022-09-30", "price": 903.5595574351213}, {"date": "2022-10-31", "price": 941.2462352335325}, {"date": "2022-11-30", "price": 949.9071487648446}, {"date": "2022-12-31", "price": 954.6043288962408}, {"date": "2023-01-31", "price": 959.3171142772429}, {"date": "2023-02-28", "price": 955.025670635602}, {"date": "2023-03-31", "price": 963.4525054228243}, {"date": "2023-04-30", "price": 972.8780761848286}, {"date": "2023-05-31", "price": 980.836753483872}, {"date": "2023-06-30", "price": 977.466019568983}, {"date": "2023-07-31", "price": 972.3787081974377}, {"date": "2023-08-31", "price": 956.6642218442285}, {"date": "2023-09-30", "price": 928.621588302305}, {"date": "2023-10-31", "price": 921.7864889748912}, {"date": "2023-11-30", "price": 963.9206629110034}, {"date": "2023-12-31", "price": 961.8607699630155}, {"date": "2024-01-31", "price": 970.4280519966918}, {"date": "2024-02-29", "price": 959.5043772725146}, {"date": "2024-03-31", "price": 938.1563958115509}, {"date": "2024-04-30", "price": 933.7088996738504}, {"date": "2024-05-31", "price": 890.71643700941}, {"date": "2024-06-30", "price": 891.5903309873443}, {"date": "2024-07-31", "price": 877.7484745868511}, {"date": "2024-08-31", "price": 878.6067633151793}, {"date": "2024-09-30", "price": 872.9732682074249}, {"date": "2024-10-31", "price": 837.2684571089715}, {"date": "2024-11-30", "price": 864.0002496839936}, {"date": "2024-12-31", "price": 941.6051559744699}, {"date": "2025-01-31", "price": 924.9075388960847}, {"date": "2025-02-28", "price": 967.2289758274683}, {"date": "2025-03-12", "price": 1000.0}, {"date": "2025-03-31", "price": 988.34}, {"date": "2025-04-30", "price": 978.17}, {"date": "2025-05-31", "price": 995.91}, {"date": "2025-06-30", "price": 1055.75}, {"date": "2025-07-31", "price": 1094.8}, {"date": "2025-08-31", "price": 1116.63}, {"date": "2025-09-30", "price": 1073.24}, {"date": "2025-10-31", "price": 1092.66}, {"date": "2025-11-30", "price": 1120.0}, {"date": "2025-12-31", "price": 1129.15}, {"date": "2026-01-31", "price": 1129.59}, {"date": "2026-02-28", "price": 1148.85}, {"date": "2026-03-31", "price": 1162.8}, {"date": "2026-04-30", "price": 1176.73}]}, "M3": {"meta": {"name": "Хедж-фонд М3", "desc": "фонд облигаций в GLDRUB", "benchmark": "GLDRUB", "benchmark_label": "GLDRUB", "currency": "GLD"}, "series": [{"date": "2021-12-31", "price": 139.98971653361272}, {"date": "2022-01-31", "price": 147.5760553411989}, {"date": "2022-02-28", "price": 189.96722490759535}, {"date": "2022-03-31", "price": 186.57726011878898}, {"date": "2022-04-30", "price": 133.19835899621717}, {"date": "2022-05-05", "price": 120.95701499988662}, {"date": "2022-05-31", "price": 91.88213005727438}, {"date": "2022-06-30", "price": 66.33776404846319}, {"date": "2022-07-31", "price": 86.65679861938287}, {"date": "2022-08-31", "price": 80.79360780614283}, {"date": "2022-09-30", "price": 77.22146563915578}, {"date": "2022-10-31", "price": 78.90092641532705}, {"date": "2022-11-30", "price": 86.50519031141869}, {"date": "2022-12-31", "price": 120.5392533259492}, {"date": "2023-01-31", "price": 134.6760788844006}, {"date": "2023-02-28", "price": 141.08361719252517}, {"date": "2023-03-31", "price": 179.96101279718215}, {"date": "2023-04-30", "price": 196.1170161871495}, {"date": "2023-05-31", "price": 192.5593070079298}, {"date": "2023-06-30", "price": 217.42980372811607}, {"date": "2023-07-31", "price": 240.01164402540377}, {"date": "2023-08-31", "price": 263.79536882745435}, {"date": "2023-09-30", "price": 250.49487755134774}, {"date": "2023-10-31", "price": 249.6986739350261}, {"date": "2023-11-30", "price": 240.60183343697304}, {"date": "2023-12-31", "price": 257.8075553678386}, {"date": "2024-01-31", "price": 252.53883048411745}, {"date": "2024-02-29", "price": 261.5059824989339}, {"date": "2024-03-31", "price": 329.739269401931}, {"date": "2024-04-30", "price": 342.79541782896445}, {"date": "2024-05-31", "price": 328.17303655940066}, {"date": "2024-06-30", "price": 313.86935794335096}, {"date": "2024-07-31", "price": 336.98797675103305}, {"date": "2024-08-31", "price": 387.7187683954308}, {"date": "2024-09-30", "price": 461.2795117326092}, {"date": "2024-10-31", "price": 536.5609677003657}, {"date": "2024-11-30", "price": 594.6667930130686}, {"date": "2024-12-31", "price": 539.0800298143095}, {"date": "2025-01-31", "price": 576.269380361234}, {"date": "2025-02-28", "price": 492.04592679418187}, {"date": "2025-03-31", "price": 532.8059723747526}, {"date": "2025-04-30", "price": 546.7107091296275}, {"date": "2025-05-31", "price": 506.278991954819}, {"date": "2025-06-30", "price": 496.81615547686766}, {"date": "2025-07-31", "price": 522.9481891383514}, {"date": "2025-08-31", "price": 572.3906739394507}, {"date": "2025-09-30", "price": 744.2303245744428}, {"date": "2025-10-31", "price": 797.4513005598386}, {"date": "2025-11-30", "price": 797.6046787006698}, {"date": "2025-12-31", "price": 894.2223740427462}, {"date": "2026-01-19", "price": 1000.0}, {"date": "2026-01-31", "price": 1031.63}, {"date": "2026-02-28", "price": 1089.32}, {"date": "2026-03-31", "price": 992.83}, {"date": "2026-04-30", "price": 924.75}]}, "Liq": {"meta": {"name": "Фонд денежной ликвидности", "desc": "фонд денежной ликвидности", "benchmark": "RUSFAR", "benchmark_label": "RUSFAR", "currency": "RUB"}, "series": [{"date": "2021-12-31", "price": 1000.0}, {"date": "2022-01-31", "price": 1007.589348392431}, {"date": "2022-02-28", "price": 1014.6327004976365}, {"date": "2022-03-31", "price": 1031.5039857728968}, {"date": "2022-04-30", "price": 1045.8090884981982}, {"date": "2022-05-05", "price": 1048.5780696691263}, {"date": "2022-05-31", "price": 1058.585401619269}, {"date": "2022-06-30", "price": 1067.1809431695865}, {"date": "2022-07-31", "price": 1074.895090713383}, {"date": "2022-08-31", "price": 1082.6404380450215}, {"date": "2022-09-30", "price": 1089.5043913701388}, {"date": "2022-10-31", "price": 1096.5555434223047}, {"date": "2022-11-30", "price": 1103.1776983916511}, {"date": "2022-12-31", "price": 1109.5814548461071}, {"date": "2023-01-31", "price": 1116.6404068452334}, {"date": "2023-02-28", "price": 1122.724365474315}, {"date": "2023-03-31", "price": 1129.7365177916793}, {"date": "2023-04-19", "price": 1133.9640890441945}, {"date": "2023-04-30", "price": 1135.945275572126}, {"date": "2023-05-31", "price": 1143.3240253966273}, {"date": "2023-06-30", "price": 1150.133379093022}, {"date": "2023-07-31", "price": 1157.6447280158495}, {"date": "2023-08-08", "price": 1159.6727142255434}, {"date": "2023-08-31", "price": 1167.60526028423}, {"date": "2023-09-30", "price": 1178.8839835889119}, {"date": "2023-10-31", "price": 1192.2686925728906}, {"date": "2023-11-01", "price": 1192.7444893374725}, {"date": "2023-11-30", "price": 1206.807793707003}, {"date": "2023-12-31", "price": 1220.9178977582953}, {"date": "2024-01-31", "price": 1238.6003775174331}, {"date": "2024-02-29", "price": 1254.1144720215902}, {"date": "2024-03-31", "price": 1269.6909661014306}, {"date": "2024-04-30", "price": 1284.9632622498168}, {"date": "2024-05-21", "price": 1299.0343665663077}, {"date": "2024-05-31", "price": 1304.6737282186482}, {"date": "2024-06-30", "price": 1320.375021449854}, {"date": "2024-07-31", "price": 1339.5316911844998}, {"date": "2024-08-31", "price": 1358.9223593279567}, {"date": "2024-09-10", "price": 1366.5117077203877}, {"date": "2024-09-30", "price": 1380.278614105424}, {"date": "2024-10-31", "price": 1402.2978643745223}, {"date": "2024-11-30", "price": 1425.237508384943}, {"date": "2024-12-31", "price": 1448.4033508572143}, {"date": "2025-01-31", "price": 1477.1539553531036}, {"date": "2025-02-28", "price": 1500.8345943247587}, {"date": "2025-03-12", "price": 1511.4035224560473}, {"date": "2025-03-31", "price": 1528.306007519149}, {"date": "2025-04-30", "price": 1554.9896260705427}, {"date": "2025-05-31", "price": 1581.7824438793816}, {"date": "2025-06-30", "price": 1609.0120587180008}, {"date": "2025-07-31", "price": 1635.5084785423462}, {"date": "2025-08-31", "price": 1658.7289206433397}, {"date": "2025-09-30", "price": 1683.9383492192253}, {"date": "2025-10-31", "price": 1707.6891877135236}, {"date": "2025-11-30", "price": 1729.1156420136342}, {"date": "2025-12-31", "price": 1750.510896525904}, {"date": "2026-01-19", "price": 1768.6691730496234}, {"date": "2026-01-31", "price": 1777.03071619113}, {"date": "2026-02-28", "price": 1798.1139728249848}, {"date": "2026-03-31", "price": 1821.8024117436}, {"date": "2026-04-30", "price": 1843.7592624370154}]}};
+const INDICES = [{"date": "2020-12-31", "RUSFAR": null, "RGBITR": null, "MCFTR": null, "CbondsZO_RUB": null, "RUCNYTR_RUB": null, "GLDRUB": null, "USDRUB": null, "CNYRUB": null, "CPI_rub": 4.91, "CPI_USD": 1.4, "CPI_cny": 0.2}, {"date": "2021-01-31", "RUSFAR": null, "RGBITR": null, "MCFTR": null, "CbondsZO_RUB": null, "RUCNYTR_RUB": null, "GLDRUB": null, "USDRUB": null, "CNYRUB": null, "CPI_rub": 5.19, "CPI_USD": 1.4, "CPI_cny": -0.3}, {"date": "2021-02-28", "RUSFAR": null, "RGBITR": null, "MCFTR": null, "CbondsZO_RUB": null, "RUCNYTR_RUB": null, "GLDRUB": null, "USDRUB": null, "CNYRUB": null, "CPI_rub": 5.67, "CPI_USD": 1.7, "CPI_cny": -0.2}, {"date": "2021-03-31", "RUSFAR": null, "RGBITR": null, "MCFTR": null, "CbondsZO_RUB": null, "RUCNYTR_RUB": null, "GLDRUB": null, "USDRUB": null, "CNYRUB": null, "CPI_rub": 5.79, "CPI_USD": 2.6, "CPI_cny": 0.4}, {"date": "2021-04-30", "RUSFAR": null, "RGBITR": null, "MCFTR": null, "CbondsZO_RUB": null, "RUCNYTR_RUB": null, "GLDRUB": null, "USDRUB": null, "CNYRUB": null, "CPI_rub": 5.53, "CPI_USD": 4.2, "CPI_cny": 0.9}, {"date": "2021-05-31", "RUSFAR": null, "RGBITR": null, "MCFTR": null, "CbondsZO_RUB": null, "RUCNYTR_RUB": null, "GLDRUB": null, "USDRUB": null, "CNYRUB": null, "CPI_rub": 6.02, "CPI_USD": 5.0, "CPI_cny": 1.3}, {"date": "2021-06-30", "RUSFAR": null, "RGBITR": null, "MCFTR": null, "CbondsZO_RUB": null, "RUCNYTR_RUB": null, "GLDRUB": null, "USDRUB": null, "CNYRUB": null, "CPI_rub": 6.5, "CPI_USD": 5.4, "CPI_cny": 1.1}, {"date": "2021-07-31", "RUSFAR": null, "RGBITR": null, "MCFTR": null, "CbondsZO_RUB": null, "RUCNYTR_RUB": null, "GLDRUB": null, "USDRUB": null, "CNYRUB": null, "CPI_rub": 6.5, "CPI_USD": 5.4, "CPI_cny": 1.0}, {"date": "2021-08-31", "RUSFAR": null, "RGBITR": null, "MCFTR": null, "CbondsZO_RUB": null, "RUCNYTR_RUB": null, "GLDRUB": null, "USDRUB": null, "CNYRUB": null, "CPI_rub": 6.68, "CPI_USD": 5.3, "CPI_cny": 0.8}, {"date": "2021-09-30", "RUSFAR": null, "RGBITR": null, "MCFTR": null, "CbondsZO_RUB": null, "RUCNYTR_RUB": null, "GLDRUB": null, "USDRUB": null, "CNYRUB": null, "CPI_rub": 7.4, "CPI_USD": 5.4, "CPI_cny": 0.7}, {"date": "2021-10-31", "RUSFAR": null, "RGBITR": null, "MCFTR": null, "CbondsZO_RUB": null, "RUCNYTR_RUB": null, "GLDRUB": null, "USDRUB": null, "CNYRUB": null, "CPI_rub": 8.13, "CPI_USD": 6.2, "CPI_cny": 1.5}, {"date": "2021-11-30", "RUSFAR": null, "RGBITR": null, "MCFTR": null, "CbondsZO_RUB": null, "RUCNYTR_RUB": null, "GLDRUB": null, "USDRUB": null, "CNYRUB": null, "CPI_rub": 8.4, "CPI_USD": 6.8, "CPI_cny": 2.3}, {"date": "2021-12-31", "RUSFAR": 1282.06, "RGBITR": 589.78, "MCFTR": 7250.04, "CbondsZO_RUB": 8150.9590191656625, "RUCNYTR_RUB": 1166.945825, "GLDRUB": 4357.0, "USDRUB": 74.2926, "CNYRUB": 11.7175, "CPI_rub": 8.39, "CPI_USD": 7.0, "CPI_cny": 1.5}, {"date": "2022-01-31", "RUSFAR": 1291.79, "RGBITR": 564.69, "MCFTR": 6794.02, "CbondsZO_RUB": 7882.801051978979, "RUCNYTR_RUB": 1218.732625, "GLDRUB": 4473.5, "USDRUB": 77.8174, "CNYRUB": 12.2375, "CPI_rub": 8.73, "CPI_USD": 7.5, "CPI_cny": 0.9}, {"date": "2022-02-28", "RUSFAR": 1300.82, "RGBITR": 479.03, "MCFTR": 4754.32, "CbondsZO_RUB": 8463.354001691981, "RUCNYTR_RUB": 1355.1310890000002, "GLDRUB": 5075.5, "USDRUB": 83.5485, "CNYRUB": 13.6071, "CPI_rub": 9.15, "CPI_USD": 7.9, "CPI_cny": 0.9}, {"date": "2022-03-31", "RUSFAR": 1322.45, "RGBITR": 519.32, "MCFTR": 5202.78, "CbondsZO_RUB": 8517.710881316487, "RUCNYTR_RUB": 1341.4773, "GLDRUB": 5030.01, "USDRUB": 84.0851, "CNYRUB": 13.47, "CPI_rub": 16.69, "CPI_USD": 8.5, "CPI_cny": 1.5}, {"date": "2022-04-30", "RUSFAR": 1340.79, "RGBITR": 563.04, "MCFTR": 4705.62, "CbondsZO_RUB": 6433.63994378752, "RUCNYTR_RUB": 1081.5474, "GLDRUB": 4250.0, "USDRUB": 71.0237, "CNYRUB": 10.86, "CPI_rub": 17.83, "CPI_USD": 8.3, "CPI_cny": 2.1}, {"date": "2022-05-05", "RUSFAR": 1344.34, "RGBITR": 560.1, "MCFTR": 4638.93, "CbondsZO_RUB": 6288.007388209209, "RUCNYTR_RUB": 1019.3235680000001, "GLDRUB": 4050.0, "USDRUB": 69.416, "CNYRUB": 10.2352, "CPI_rub": null, "CPI_USD": null, "CPI_cny": null}, {"date": "2022-05-31", "RUSFAR": 1357.17, "RGBITR": 579.27, "MCFTR": 4544.33, "CbondsZO_RUB": 6052.135629824787, "RUCNYTR_RUB": 943.555496, "GLDRUB": 3529.84, "USDRUB": 63.0975, "CNYRUB": 9.4744, "CPI_rub": 17.1, "CPI_USD": 8.6, "CPI_cny": 2.1}, {"date": "2022-06-30", "RUSFAR": 1368.19, "RGBITR": 607.78, "MCFTR": 4256.3, "CbondsZO_RUB": 5427.7512275015115, "RUCNYTR_RUB": 816.9467289999999, "GLDRUB": 2999.3, "USDRUB": 51.158, "CNYRUB": 8.2031, "CPI_rub": 15.9, "CPI_USD": 9.1, "CPI_cny": 2.5}, {"date": "2022-07-31", "RUSFAR": 1378.08, "RGBITR": 618.24, "MCFTR": 4323.46, "CbondsZO_RUB": 6755.759957221374, "RUCNYTR_RUB": 929.164741, "GLDRUB": 3428.0, "USDRUB": 61.3101, "CNYRUB": 9.3299, "CPI_rub": 15.1, "CPI_USD": 8.5, "CPI_cny": 2.7}, {"date": "2022-08-31", "RUSFAR": 1388.01, "RGBITR": 616.73, "MCFTR": 4687.26, "CbondsZO_RUB": 6522.373229108845, "RUCNYTR_RUB": 863.9432500000001, "GLDRUB": 3310.0, "USDRUB": 60.3677, "CNYRUB": 8.675, "CPI_rub": 14.3, "CPI_USD": 8.3, "CPI_cny": 2.5}, {"date": "2022-09-30", "RUSFAR": 1396.81, "RGBITR": 579.01, "MCFTR": 3832.96, "CbondsZO_RUB": 5730.379081333223, "RUCNYTR_RUB": 808.6708, "GLDRUB": 3236.0, "USDRUB": 57.413, "CNYRUB": 8.12, "CPI_rub": 13.68, "CPI_USD": 8.2, "CPI_cny": 2.8}, {"date": "2022-10-31", "RUSFAR": 1405.85, "RGBITR": 603.16, "MCFTR": 4429.18, "CbondsZO_RUB": 5979.344069730026, "RUCNYTR_RUB": 808.6708, "GLDRUB": 3271.0, "USDRUB": 61.5343, "CNYRUB": 8.403, "CPI_rub": 12.63, "CPI_USD": 7.7, "CPI_cny": 2.1}, {"date": "2022-11-30", "RUSFAR": 1414.34, "RGBITR": 608.71, "MCFTR": 4445.38, "CbondsZO_RUB": 6259.141402305438, "RUCNYTR_RUB": 843.32812, "GLDRUB": 3425.0, "USDRUB": 61.0742, "CNYRUB": 8.468, "CPI_rub": 11.98, "CPI_USD": 7.1, "CPI_cny": 1.6}, {"date": "2022-12-31", "RUSFAR": 1422.55, "RGBITR": 611.72, "MCFTR": 4548.82, "CbondsZO_RUB": 7204.888171250001, "RUCNYTR_RUB": 987.9290400000001, "GLDRUB": 4043.0, "USDRUB": 70.3375, "CNYRUB": 9.912, "CPI_rub": 11.94, "CPI_USD": 6.5, "CPI_cny": 1.8}, {"date": "2023-01-31", "RUSFAR": 1431.6, "RGBITR": 614.74, "MCFTR": 4712.84, "CbondsZO_RUB": 7277.969769649999, "RUCNYTR_RUB": 1036.338, "GLDRUB": 4273.51, "USDRUB": 69.5927, "CNYRUB": 10.405, "CPI_rub": 11.77, "CPI_USD": 6.4, "CPI_cny": 2.1}, {"date": "2023-02-28", "RUSFAR": 1439.4, "RGBITR": 611.99, "MCFTR": 4771.2, "CbondsZO_RUB": 7593.86770299, "RUCNYTR_RUB": 1068.7509000000002, "GLDRUB": 4373.99, "USDRUB": 75.4323, "CNYRUB": 10.71, "CPI_rub": 10.99, "CPI_USD": 6.0, "CPI_cny": 1.0}, {"date": "2023-03-31", "RUSFAR": 1448.39, "RGBITR": 617.39, "MCFTR": 5189.44, "CbondsZO_RUB": 7962.7295706899995, "RUCNYTR_RUB": 1112.70864, "GLDRUB": 4940.02, "USDRUB": 77.0863, "CNYRUB": 11.192, "CPI_rub": 3.51, "CPI_USD": 5.0, "CPI_cny": 0.7}, {"date": "2023-04-19", "RUSFAR": 1453.81, "RGBITR": 618.99, "MCFTR": 5525.66, "CbondsZO_RUB": 8060.659301760001, "RUCNYTR_RUB": 1166.5320000000002, "GLDRUB": 5215.01, "USDRUB": 81.6028, "CNYRUB": 11.855, "CPI_rub": null, "CPI_USD": null, "CPI_cny": null}, {"date": "2023-04-30", "RUSFAR": 1456.35, "RGBITR": 623.43, "MCFTR": 5585.84, "CbondsZO_RUB": 7953.175607939999, "RUCNYTR_RUB": 1138.55622, "GLDRUB": 5157.0, "USDRUB": 80.5093, "CNYRUB": 11.586, "CPI_rub": 2.31, "CPI_USD": 4.9, "CPI_cny": 0.1}, {"date": "2023-05-31", "RUSFAR": 1465.81, "RGBITR": 628.53, "MCFTR": 5885.95, "CbondsZO_RUB": 8051.533626400001, "RUCNYTR_RUB": 1128.1140599999999, "GLDRUB": 5110.01, "USDRUB": 80.6872, "CNYRUB": 11.379, "CPI_rub": 2.51, "CPI_USD": 4.1, "CPI_cny": 0.2}, {"date": "2023-06-30", "RUSFAR": 1474.54, "RGBITR": 626.37, "MCFTR": 6151.53, "CbondsZO_RUB": 8704.22812054, "RUCNYTR_RUB": 1226.54072, "GLDRUB": 5429.99, "USDRUB": 87.0341, "CNYRUB": 12.332, "CPI_rub": 3.25, "CPI_USD": 3.0, "CPI_cny": 0.0}, {"date": "2023-07-31", "RUSFAR": 1484.17, "RGBITR": 623.11, "MCFTR": 6805.15, "CbondsZO_RUB": 8870.8391415, "RUCNYTR_RUB": 1269.78512, "GLDRUB": 5705.0, "USDRUB": 90.9783, "CNYRUB": 12.808, "CPI_rub": 4.3, "CPI_USD": 3.2, "CPI_cny": -0.3}, {"date": "2023-08-08", "RUSFAR": 1486.77, "RGBITR": 620.71, "MCFTR": 6831.3, "CbondsZO_RUB": 9567.44262012, "RUCNYTR_RUB": 1328.21262, "GLDRUB": 5959.99, "USDRUB": 96.5668, "CNYRUB": 13.419, "CPI_rub": null, "CPI_USD": null, "CPI_cny": null}, {"date": "2023-08-31", "RUSFAR": 1496.94, "RGBITR": 613.04, "MCFTR": 7147.21, "CbondsZO_RUB": 9668.63254266, "RUCNYTR_RUB": 1311.3369, "GLDRUB": 5980.99, "USDRUB": 95.9283, "CNYRUB": 13.17, "CPI_rub": 5.15, "CPI_USD": 3.7, "CPI_cny": 0.1}, {"date": "2023-09-30", "RUSFAR": 1511.4, "RGBITR": 595.07, "MCFTR": 6937.46, "CbondsZO_RUB": 10240.34042017, "RUCNYTR_RUB": 1343.36308, "GLDRUB": 5828.26, "USDRUB": 97.4147, "CNYRUB": 13.493, "CPI_rub": 6.0, "CPI_USD": 3.7, "CPI_cny": 0.0}, {"date": "2023-10-31", "RUSFAR": 1528.56, "RGBITR": 590.69, "MCFTR": 7117.04, "CbondsZO_RUB": 10126.850182749999, "RUCNYTR_RUB": 1265.2019, "GLDRUB": 5818.99, "USDRUB": 93.2435, "CNYRUB": 12.685, "CPI_rub": 6.69, "CPI_USD": 3.2, "CPI_cny": -0.2}, {"date": "2023-11-01", "RUSFAR": 1529.17, "RGBITR": 592.15, "MCFTR": 7129.38, "CbondsZO_RUB": 10093.673723939999, "RUCNYTR_RUB": 1262.6361, "GLDRUB": 5727.95, "USDRUB": 92.0226, "CNYRUB": 12.639, "CPI_rub": null, "CPI_USD": null, "CPI_cny": null}, {"date": "2023-11-30", "RUSFAR": 1547.2, "RGBITR": 617.69, "MCFTR": 7038.83, "CbondsZO_RUB": 10116.406060370002, "RUCNYTR_RUB": 1250.1489, "GLDRUB": 5712.01, "USDRUB": 88.8841, "CNYRUB": 12.489, "CPI_rub": 7.48, "CPI_USD": 3.1, "CPI_cny": -0.5}, {"date": "2023-12-31", "RUSFAR": 1565.29, "RGBITR": 616.37, "MCFTR": 6997.68, "CbondsZO_RUB": 10368.1468566, "RUCNYTR_RUB": 1263.041725, "GLDRUB": 5912.72, "USDRUB": 89.6883, "CNYRUB": 12.6115, "CPI_rub": 7.42, "CPI_USD": 3.4, "CPI_cny": -0.3}, {"date": "2024-01-31", "RUSFAR": 1587.96, "RGBITR": 621.86, "MCFTR": 7302.35, "CbondsZO_RUB": 10399.04416098, "RUCNYTR_RUB": 1258.8507, "GLDRUB": 5851.99, "USDRUB": 89.2887, "CNYRUB": 12.501, "CPI_rub": 7.44, "CPI_USD": 3.1, "CPI_cny": -0.8}, {"date": "2024-02-29", "RUSFAR": 1607.85, "RGBITR": 614.86, "MCFTR": 7399.15, "CbondsZO_RUB": 10587.45676708, "RUCNYTR_RUB": 1267.13322, "GLDRUB": 5954.98, "USDRUB": 91.8692, "CNYRUB": 12.582, "CPI_rub": 7.69, "CPI_USD": 3.2, "CPI_cny": 0.7}, {"date": "2024-03-31", "RUSFAR": 1627.82, "RGBITR": 601.18, "MCFTR": 7582.21, "CbondsZO_RUB": 10852.912634, "RUCNYTR_RUB": 1280.53126, "GLDRUB": 6686.9, "USDRUB": 92.366, "CNYRUB": 12.671, "CPI_rub": 7.72, "CPI_USD": 3.5, "CPI_cny": 0.1}, {"date": "2024-04-30", "RUSFAR": 1647.4, "RGBITR": 598.33, "MCFTR": 7895.13, "CbondsZO_RUB": 11030.58126842, "RUCNYTR_RUB": 1288.67724, "GLDRUB": 6818.0, "USDRUB": 91.7791, "CNYRUB": 12.739, "CPI_rub": 7.84, "CPI_USD": 3.4, "CPI_cny": 0.3}, {"date": "2024-05-21", "RUSFAR": 1665.44, "RGBITR": 587.65, "MCFTR": 7877.95, "CbondsZO_RUB": 10645.20109527, "RUCNYTR_RUB": 1257.5508, "GLDRUB": 6969.5, "USDRUB": 90.6537, "CNYRUB": 12.408, "CPI_rub": null, "CPI_USD": null, "CPI_cny": null}, {"date": "2024-05-31", "RUSFAR": 1672.67, "RGBITR": 570.78, "MCFTR": 7412.1, "CbondsZO_RUB": 10505.875382100001, "RUCNYTR_RUB": 1258.0013999999999, "GLDRUB": 6671.0, "USDRUB": 89.7869, "CNYRUB": 12.388, "CPI_rub": 8.3, "CPI_USD": 3.3, "CPI_cny": 0.3}, {"date": "2024-06-30", "RUSFAR": 1692.8, "RGBITR": 571.34, "MCFTR": 7312.25, "CbondsZO_RUB": 9877.3292696, "RUCNYTR_RUB": 1186.12326, "GLDRUB": 6524.0, "USDRUB": 85.748, "CNYRUB": 11.7345, "CPI_rub": 8.59, "CPI_USD": 3.0, "CPI_cny": 0.2}, {"date": "2024-07-31", "RUSFAR": 1717.36, "RGBITR": 562.47, "MCFTR": 7048.73, "CbondsZO_RUB": 9541.37910187, "RUCNYTR_RUB": 1183.0528, "GLDRUB": 6760.0, "USDRUB": 86.1091, "CNYRUB": 11.84, "CPI_rub": 9.13, "CPI_USD": 2.9, "CPI_cny": 0.5}, {"date": "2024-08-31", "RUSFAR": 1742.22, "RGBITR": 563.02, "MCFTR": 6348.43, "CbondsZO_RUB": 9527.661916680001, "RUCNYTR_RUB": 1207.18931, "GLDRUB": 7251.0, "USDRUB": 91.1868, "CNYRUB": 12.049, "CPI_rub": 9.05, "CPI_USD": 2.5, "CPI_cny": 0.6}, {"date": "2024-09-10", "RUSFAR": 1751.95, "RGBITR": 573.85, "MCFTR": 6401.99, "CbondsZO_RUB": 9562.3128135, "RUCNYTR_RUB": 1249.55746, "GLDRUB": 7313.0, "USDRUB": 90.3853, "CNYRUB": 12.682, "CPI_rub": null, "CPI_USD": null, "CPI_cny": null}, {"date": "2024-09-30", "RUSFAR": 1769.6, "RGBITR": 559.41, "MCFTR": 6862.15, "CbondsZO_RUB": 9855.13277907, "RUCNYTR_RUB": 1295.4016000000001, "GLDRUB": 7909.0, "USDRUB": 93.2221, "CNYRUB": 13.24, "CPI_rub": 8.63, "CPI_USD": 2.4, "CPI_cny": 0.4}, {"date": "2024-10-31", "RUSFAR": 1797.83, "RGBITR": 536.53, "MCFTR": 6191.65, "CbondsZO_RUB": 9521.4583849, "RUCNYTR_RUB": 1287.3172499999998, "GLDRUB": 8530.0, "USDRUB": 97.0226, "CNYRUB": 13.575, "CPI_rub": 8.54, "CPI_USD": 2.6, "CPI_cny": 0.3}, {"date": "2024-11-30", "RUSFAR": 1827.24, "RGBITR": 553.66, "MCFTR": 6243.84, "CbondsZO_RUB": 10947.488204459998, "RUCNYTR_RUB": 1409.73861, "GLDRUB": 8980.0, "USDRUB": 107.7409, "CNYRUB": 14.5005, "CPI_rub": 8.88, "CPI_USD": 2.7, "CPI_cny": 0.2}, {"date": "2024-12-31", "RUSFAR": 1856.94, "RGBITR": 603.39, "MCFTR": 7112.22, "CbondsZO_RUB": 11303.85426464, "RUCNYTR_RUB": 1411.3409000000001, "GLDRUB": 8550.0, "USDRUB": 101.6797, "CNYRUB": 13.705, "CPI_rub": 9.52, "CPI_USD": 2.9, "CPI_cny": 0.1}, {"date": "2025-01-31", "RUSFAR": 1893.8, "RGBITR": 592.69, "MCFTR": 7306.68, "CbondsZO_RUB": 10883.50418077, "RUCNYTR_RUB": 1390.01786, "GLDRUB": 8840.0, "USDRUB": 97.8107, "CNYRUB": 13.354, "CPI_rub": 9.92, "CPI_USD": 3.0, "CPI_cny": 0.5}, {"date": "2025-02-28", "RUSFAR": 1924.16, "RGBITR": 619.81, "MCFTR": 7932.19, "CbondsZO_RUB": 10509.3108452, "RUCNYTR_RUB": 1290.73581, "GLDRUB": 8168.5, "USDRUB": 88.2568, "CNYRUB": 12.123, "CPI_rub": 10.06, "CPI_USD": 2.8, "CPI_cny": -0.7}, {"date": "2025-03-12", "RUSFAR": 1937.71, "RGBITR": 640.81, "MCFTR": 7891.28, "CbondsZO_RUB": 10089.92622316, "RUCNYTR_RUB": 1263.3062400000001, "GLDRUB": 8212.9, "USDRUB": 86.5669, "CNYRUB": 11.936, "CPI_rub": 10.06, "CPI_USD": 2.8, "CPI_cny": -0.7}, {"date": "2025-03-31", "RUSFAR": 1959.38, "RGBITR": 632.42, "MCFTR": 7468.42, "CbondsZO_RUB": 10239.464369500001, "RUCNYTR_RUB": 1258.51094, "GLDRUB": 8500.1, "USDRUB": 85.4963, "CNYRUB": 11.681, "CPI_rub": 10.34, "CPI_USD": 2.4, "CPI_cny": -0.1}, {"date": "2025-04-30", "RUSFAR": 1993.59, "RGBITR": 633.3, "MCFTR": 7260.46, "CbondsZO_RUB": 9729.811060200002, "RUCNYTR_RUB": 1222.67915, "GLDRUB": 8610.3, "USDRUB": 81.4933, "CNYRUB": 11.165, "CPI_rub": 10.23, "CPI_USD": 2.3, "CPI_cny": -0.1}, {"date": "2025-05-31", "RUSFAR": 2027.94, "RGBITR": 650.15, "MCFTR": 7044.2, "CbondsZO_RUB": 9463.75354038, "RUCNYTR_RUB": 1203.47314, "GLDRUB": 8285.8, "USDRUB": 78.6171, "CNYRUB": 10.903, "CPI_rub": 9.88, "CPI_USD": 2.4, "CPI_cny": -0.1}, {"date": "2025-06-30", "RUSFAR": 2062.85, "RGBITR": 686.13, "MCFTR": 7220.37, "CbondsZO_RUB": 9444.390788480001, "RUCNYTR_RUB": 1223.2584, "GLDRUB": 8208.0, "USDRUB": 78.5284, "CNYRUB": 10.92, "CPI_rub": 9.4, "CPI_USD": 2.7, "CPI_cny": 0.1}, {"date": "2025-07-31", "RUSFAR": 2096.82, "RGBITR": 716.77, "MCFTR": 7163.29, "CbondsZO_RUB": 9857.67730191, "RUCNYTR_RUB": 1239.75758, "GLDRUB": 8421.1, "USDRUB": 80.3163, "CNYRUB": 11.098, "CPI_rub": 8.79, "CPI_USD": 2.7, "CPI_cny": 0.0}, {"date": "2025-08-31", "RUSFAR": 2126.59, "RGBITR": 721.48, "MCFTR": 7603.98, "CbondsZO_RUB": 10202.36222796, "RUCNYTR_RUB": 1270.01448, "GLDRUB": 8810.2, "USDRUB": 80.3316, "CNYRUB": 11.256, "CPI_rub": 8.1, "CPI_USD": 2.9, "CPI_cny": -0.4}, {"date": "2025-09-30", "RUSFAR": 2158.91, "RGBITR": 701.76, "MCFTR": 7052.01, "CbondsZO_RUB": 10192.27395704, "RUCNYTR_RUB": 1298.480505, "GLDRUB": 10046.0, "USDRUB": 82.6084, "CNYRUB": 11.5185, "CPI_rub": 8.0, "CPI_USD": 3.0, "CPI_cny": -0.3}, {"date": "2025-10-31", "RUSFAR": 2189.36, "RGBITR": 714.6, "MCFTR": 6671.92, "CbondsZO_RUB": 10029.419181879999, "RUCNYTR_RUB": 1266.018015, "GLDRUB": 10399.0, "USDRUB": 80.9756, "CNYRUB": 11.2605, "CPI_rub": 7.7, "CPI_USD": null, "CPI_cny": 0.2}, {"date": "2025-11-30", "RUSFAR": 2216.83, "RGBITR": 728.42, "MCFTR": 7071.45, "CbondsZO_RUB": 9696.433648519998, "RUCNYTR_RUB": 1233.6361599999998, "GLDRUB": 10400.0, "USDRUB": 78.2284, "CNYRUB": 10.921, "CPI_rub": 6.6, "CPI_USD": 2.7, "CPI_cny": 0.7}, {"date": "2025-12-31", "RUSFAR": 2244.26, "RGBITR": 742.7, "MCFTR": 7321.15, "CbondsZO_RUB": 9998.467433799999, "RUCNYTR_RUB": 1279.8244300000001, "GLDRUB": 11011.9, "USDRUB": 78.2267, "CNYRUB": 11.2285, "CPI_rub": 5.6, "CPI_USD": 2.7, "CPI_cny": 0.8}, {"date": "2026-01-19", "RUSFAR": 2267.54, "RGBITR": 740.75, "MCFTR": 7399.98, "CbondsZO_RUB": 9811.497525600002, "RUCNYTR_RUB": 1273.699175, "GLDRUB": 11645.0, "USDRUB": 77.8332, "CNYRUB": 11.1425, "CPI_rub": null, "CPI_USD": null, "CPI_cny": null}, {"date": "2026-01-31", "RUSFAR": 2278.26, "RGBITR": 741.51, "MCFTR": 7487.4, "CbondsZO_RUB": 9646.543541739999, "RUCNYTR_RUB": 1255.9995999999999, "GLDRUB": 12260.0, "USDRUB": 75.7327, "CNYRUB": 10.936, "CPI_rub": 6.0, "CPI_USD": 2.4, "CPI_cny": 0.2}, {"date": "2026-02-28", "RUSFAR": 2305.29, "RGBITR": 756.13, "MCFTR": 7531.54, "CbondsZO_RUB": 9724.642512, "RUCNYTR_RUB": 1279.99765, "GLDRUB": 12999.0, "USDRUB": 76.96, "CNYRUB": 11.2025, "CPI_rub": 5.9, "CPI_USD": 2.4, "CPI_cny": 1.3}, {"date": "2026-03-31", "RUSFAR": 2335.66, "RGBITR": 770.15, "MCFTR": 7470.27, "CbondsZO_RUB": 10173.566762999999, "RUCNYTR_RUB": 1345.63037, "GLDRUB": 11899.0, "USDRUB": 80.91, "CNYRUB": 11.743, "CPI_rub": 5.9, "CPI_USD": 3.3, "CPI_cny": 1.0}, {"date": "2026-04-30", "RUSFAR": 2363.81, "RGBITR": 780.67, "MCFTR": 7175.56, "CbondsZO_RUB": 9668.138688000001, "RUCNYTR_RUB": 1276.6832499999998, "GLDRUB": 11080.0, "USDRUB": 74.9775, "CNYRUB": 10.9775, "CPI_rub": null, "CPI_USD": null, "CPI_cny": null}];
+
+// ============================================================
+// Configuration
+// ============================================================
+
+// Аллокации из официальной таблицы.
+// "Базовый" — фиксированный портфель (10×10%), без валютных подверсий.
+// "Консервативный" и "Агрессивный" имеют 3 валютные подверсии: rub6040 / equal / val6040.
+// Золото (М3) считается валютным активом наравне с USD/CNY.
+const ALLOCATIONS = {
+  base: { Liq:10, M3:10, Aplus:10, A12080:10, R1:10, R5:10, VO:10, D5:10, Yu5:10, D1:10 },
+  cons: {
+    rub6040: { Liq:10, M3:10, Aplus:5,  A12080:10, R1:30, R5:5,  VO:10, D5:5,  Yu5:5,  D1:10 },
+    equal:   { Liq:10, M3:10, Aplus:5,  A12080:10, R1:20, R5:5,  VO:20, D5:5,  Yu5:5,  D1:10 },
+    val6040: { Liq:10, M3:10, Aplus:5,  A12080:10, R1:10, R5:5,  VO:30, D5:5,  Yu5:5,  D1:10 }
+  },
+  agg: {
+    rub6040: { Liq:5,  M3:10, Aplus:15, A12080:5,  R1:5,  R5:30, VO:5,  D5:10, Yu5:10, D1:5 },
+    equal:   { Liq:5,  M3:10, Aplus:15, A12080:5,  R1:5,  R5:20, VO:5,  D5:20, Yu5:10, D1:5 },
+    val6040: { Liq:5,  M3:10, Aplus:15, A12080:5,  R1:5,  R5:10, VO:5,  D5:30, Yu5:10, D1:5 }
+  }
+};
+
+const RISK_PROFILES = {
+  base: { name: 'Базовый',        desc: 'Все фонды поровну, по 10%' },
+  cons: { name: 'Консервативный', desc: 'Сохранение капитала, минимум волатильности' },
+  agg:  { name: 'Агрессивный',    desc: 'Максимизация доходности на горизонте' }
+};
+
+const CCY_STRATEGIES = {
+  rub6040: { name: 'Рубль 60 / Валюта 40', rub: 60, val: 40 },
+  equal:   { name: 'Поровну 50 / 50',      rub: 50, val: 50 },
+  val6040: { name: 'Валюта 60 / Рубль 40', rub: 40, val: 60 }
+};
+
+const ASSET_COLORS_DARK = {
+  D5: '#c9a96e', D1: '#a88a52', VO: '#e0c48a', Yu5: '#8c7a4f', M3: '#b89860',
+  R5: '#6ba6dc', Aplus: '#8fb9d8', A12080: '#5b8db0', R1: '#9fbed8', Liq: '#3f6c8f'
+};
+const ASSET_COLORS_LIGHT = {
+  D5: '#a07a3d', D1: '#7d5e2e', VO: '#c89752', Yu5: '#6b5028', M3: '#8f6e35',
+  R5: '#2563eb', Aplus: '#3b82f6', A12080: '#1e40af', R1: '#60a5fa', Liq: '#1e3a8a'
+};
+
+const CCY_COLORS_DARK = {
+  RUB: '#6ba6dc', USD: '#c9a96e', CNY: '#e0c48a', GLD: '#b89860'
+};
+const CCY_COLORS_LIGHT = {
+  RUB: '#2563eb', USD: '#a07a3d', CNY: '#c89752', GLD: '#8f6e35'
+};
+
+function ASSET_COLORS() {
+  return document.documentElement.dataset.theme === 'dark' ? ASSET_COLORS_DARK : ASSET_COLORS_LIGHT;
+}
+function CCY_COLORS() {
+  return document.documentElement.dataset.theme === 'dark' ? CCY_COLORS_DARK : CCY_COLORS_LIGHT;
+}
+
+// ============================================================
+// State
+// ============================================================
+const state = {
+  amount: 10_000_000,
+  amountCcy: 'RUB',
+  baseCurrency: 'RUB',
+  risk: 'cons',     // 'base' | 'cons' | 'agg' — базовый идёт первым в UI, но дефолтным сделаю консервативный
+  ccy: 'equal',
+  startDate: null,
+  endDate: null,
+  visible: { portfolio: true, benchmark: true, inflation: false },
+  // Ручной режим
+  manual: false,
+  manualFunds: {},     // { ключ_фонда: доля_% }
+  manualIndices: {}    // { ключ_индекса: доля_% }
+};
+
+// Список индексов для ручной настройки композита
+const INDEX_LIST = [
+  { key: 'RUSFAR',       name: 'RUSFAR',           sub: 'денежный рынок' },
+  { key: 'RGBITR',       name: 'RGBITR',           sub: 'ОФЗ' },
+  { key: 'MCFTR',        name: 'MCFTR',            sub: 'российские акции' },
+  { key: 'CbondsZO_RUB', name: 'Cbonds ЗО (RUB)',  sub: 'валютные облигации' },
+  { key: 'RUCNYTR_RUB',  name: 'RUCNYTR (RUB)',    sub: 'юаневые облигации' },
+  { key: 'GLDRUB',       name: 'GLDRUB',           sub: 'золото' }
+];
+
+let donutAllocChart = null;
+let donutCcyChart = null;
+let mainChart = null;
+
+// Чтение CSS-переменной из :root (для синхронизации цветов чартов с темой)
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+function chartColors() {
+  return {
+    tooltipBg: cssVar('--tooltip-bg'),
+    tooltipBorder: cssVar('--tooltip-border'),
+    tooltipTitle: cssVar('--tooltip-title'),
+    tooltipBody: cssVar('--tooltip-body'),
+    chartText: cssVar('--chart-text'),
+    chartGrid: cssVar('--chart-grid'),
+    accent: cssVar('--accent'),
+    blue: cssVar('--blue'),
+    textDim: cssVar('--text-dim')
+  };
+}
+
+// ============================================================
+// Helpers
+// ============================================================
+const ALL_DATES = INDICES
+  .filter(r => r.RGBITR !== null && r.RGBITR !== undefined)
+  .map(r => r.date)
+  .sort();
+
+const FUND_KEYS = Object.keys(FUNDS);
+const FUND_LIST = FUND_KEYS.map(k => ({ key: k, ...FUNDS[k].meta }));
+
+function fmt(n, d=2) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return n.toLocaleString('ru-RU', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+
+function fmtMoney(v, ccy) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  const sym = { RUB: '₽', USD: '$', CNY: '¥', GLD: 'г' }[ccy] || '';
+  const abs = Math.abs(v);
+  let digits = abs >= 1000 ? 0 : abs >= 10 ? 1 : 2;
+  const formatted = v.toLocaleString('ru-RU', {
+    minimumFractionDigits: digits, maximumFractionDigits: digits
+  });
+  return ccy === 'RUB' ? `${formatted} ${sym}` : `${sym}${formatted}`;
+}
+
+function fmtMoneyCompact(v, ccy) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  const sym = { RUB: '₽', USD: '$', CNY: '¥', GLD: 'г' }[ccy] || '';
+  const abs = Math.abs(v);
+  if (abs >= 1e9) return (v/1e9).toLocaleString('ru-RU', {maximumFractionDigits:2}) + ' млрд ' + sym;
+  if (abs >= 1e6) return (v/1e6).toLocaleString('ru-RU', {maximumFractionDigits:2}) + ' млн ' + sym;
+  if (abs >= 1e3) return (v/1e3).toLocaleString('ru-RU', {maximumFractionDigits:0}) + ' тыс ' + sym;
+  return fmt(v, 0) + ' ' + sym;
+}
+
+function fmtPct(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return (n >= 0 ? '+' : '') + (n * 100).toFixed(2) + '%';
+}
+
+// FX rate native -> target on date
+function fxRate(from, to, date) {
+  if (from === to) return 1;
+  const rec = INDICES.find(r => r.date === date);
+  if (!rec) return null;
+  const rubPer = c => {
+    if (c === 'RUB') return 1;
+    if (c === 'USD') return rec.USDRUB;
+    if (c === 'CNY') return rec.CNYRUB;
+    if (c === 'GLD') return rec.GLDRUB;
+    return null;
+  };
+  const rFrom = rubPer(from), rTo = rubPer(to);
+  if (rFrom === null || rTo === null || rTo === 0) return null;
+  return rFrom / rTo;
+}
+
+function rubToBaseRate(date, base) {
+  if (base === 'RUB') return 1;
+  const rec = INDICES.find(r => r.date === date);
+  if (!rec) return null;
+  const r = base === 'USD' ? rec.USDRUB : base === 'CNY' ? rec.CNYRUB : base === 'GLD' ? rec.GLDRUB : null;
+  if (!r) return null;
+  return 1 / r;
+}
+
+function fundPriceAt(key, date) {
+  const found = FUNDS[key].series.find(s => s.date === date);
+  if (!found) return null;
+  const rate = rubToBaseRate(date, state.baseCurrency);
+  if (rate === null) return null;
+  return found.price * rate;
+}
+
+function fundPriceInCurrency(key, date, ccy) {
+  const found = FUNDS[key].series.find(s => s.date === date);
+  if (!found) return null;
+  if (ccy === 'RUB') return found.price;
+  const rate = fxRate('RUB', ccy, date);
+  if (rate === null) return null;
+  return found.price * rate;
+}
+
+// ============================================================
+// Allocation calculation
+// ============================================================
+function computeAllocation() {
+  // Ручной режим — доли заданы пользователем
+  if (state.manual) {
+    return { ...state.manualFunds };
+  }
+  // Базовый портфель — фиксированный, не зависит от ccy
+  if (state.risk === 'base') {
+    return { ...ALLOCATIONS.base };
+  }
+  // Иначе — конкретная подверсия по ccy
+  return { ...ALLOCATIONS[state.risk][state.ccy] };
+}
+
+// Композит индексов: в ручном режиме — заданный пользователем,
+// иначе — из бенчмарков фондов пропорционально их долям
+function computeIndexWeights(fundWeights) {
+  if (state.manual) {
+    return { ...state.manualIndices };
+  }
+  const total = Object.values(fundWeights).reduce((a, b) => a + b, 0);
+  const idxW = {};
+  if (total > 0) {
+    Object.entries(fundWeights).forEach(([k, w]) => {
+      if (w > 0) {
+        const b = FUNDS[k].meta.benchmark;
+        idxW[b] = (idxW[b] || 0) + w;
+      }
+    });
+  }
+  return idxW;
+}
+
+function getCurrencyBreakdown(weights) {
+  const out = { RUB: 0, USD: 0, CNY: 0, GLD: 0 };
+  Object.entries(weights).forEach(([k, w]) => {
+    out[FUNDS[k].meta.currency] += w;
+  });
+  return out;
+}
+
+// ============================================================
+// Date selectors
+// ============================================================
+function renderDateSelects() {
+  const start = document.getElementById('startDate');
+  const end = document.getElementById('endDate');
+  start.innerHTML = ''; end.innerHTML = '';
+  ALL_DATES.forEach(d => {
+    start.innerHTML += `<option value="${d}">${d}</option>`;
+    end.innerHTML += `<option value="${d}">${d}</option>`;
+  });
+  start.value = ALL_DATES[0];
+  end.value = ALL_DATES[ALL_DATES.length - 1];
+  state.startDate = start.value;
+  state.endDate = end.value;
+  start.addEventListener('change', () => { state.startDate = start.value; updateAll(); });
+  end.addEventListener('change', () => { state.endDate = end.value; updateAll(); });
+}
+
+function findValidDates(weights) {
+  const idxStart = ALL_DATES.indexOf(state.startDate);
+  const idxEnd = ALL_DATES.indexOf(state.endDate);
+  if (idxStart < 0 || idxEnd < 0 || idxStart > idxEnd) return [];
+  const range = ALL_DATES.slice(idxStart, idxEnd + 1);
+  const activeKeys = Object.entries(weights).filter(([_, w]) => w > 0).map(([k]) => k);
+  return range.filter(d => activeKeys.every(k => fundPriceAt(k, d) !== null));
+}
+
+// ============================================================
+// CPI cumulative
+// ============================================================
+const _cpiCache = {};
+function getCpiYoY(idxKey, date) {
+  const i = INDICES.findIndex(r => r.date === date);
+  if (i < 0) return null;
+  if (INDICES[i][idxKey] != null) return INDICES[i][idxKey];
+  for (let j = i - 1; j >= 0; j--) if (INDICES[j][idxKey] != null) return INDICES[j][idxKey];
+  return null;
+}
+function find12mAgo(dateStr, datesSet) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const direct = `${y - 1}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  if (datesSet.has(direct)) return direct;
+  const lastDay = new Date(y - 1, m, 0).getDate();
+  const eom = `${y - 1}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  return datesSet.has(eom) ? eom : null;
+}
+function getGlobalCpiLevels(idxKey) {
+  if (_cpiCache[idxKey]) return _cpiCache[idxKey];
+  const dates = INDICES.filter(r => r[idxKey] != null).map(r => r.date).sort();
+  const set = new Set(dates);
+  const levels = {};
+  if (!dates.length) { _cpiCache[idxKey] = {}; return {}; }
+  levels[dates[0]] = 1.0;
+  for (let i = 1; i < dates.length; i++) {
+    const d = dates[i], yoy = INDICES.find(r => r.date === d)[idxKey];
+    const p12 = find12mAgo(d, set);
+    if (p12 && levels[p12] !== undefined) levels[d] = levels[p12] * (1 + yoy / 100);
+    else levels[d] = levels[dates[i - 1]] * (Math.pow(1 + yoy / 100, 1 / 12));
+  }
+  _cpiCache[idxKey] = levels;
+  return levels;
+}
+function getCpiLevelAt(idxKey, date) {
+  const levels = getGlobalCpiLevels(idxKey);
+  if (levels[date] !== undefined) return levels[date];
+  const i = INDICES.findIndex(r => r.date === date);
+  if (i < 0) return null;
+  for (let j = i; j >= 0; j--) {
+    if (levels[INDICES[j].date] !== undefined) return levels[INDICES[j].date];
+  }
+  return null;
+}
+function buildCpiSeries(idxKey, dates) {
+  const start = getCpiLevelAt(idxKey, dates[0]);
+  if (!start) return null;
+  const out = [];
+  for (const d of dates) {
+    const lvl = getCpiLevelAt(idxKey, d);
+    if (lvl === null) return null;
+    out.push(lvl / start * 100);
+  }
+  return out;
+}
+
+// ============================================================
+// Series & metrics
+// ============================================================
+function buildPortfolioSeries(weights, dates) {
+  const total = Object.values(weights).reduce((a, b) => a + b, 0);
+  if (total <= 0) return null;
+  const norm = {};
+  Object.entries(weights).forEach(([k, v]) => { if (v > 0) norm[k] = v / total; });
+  const keys = Object.keys(norm);
+  if (!keys.length) return null;
+  const startPrices = {};
+  for (const k of keys) {
+    const p = fundPriceAt(k, dates[0]);
+    if (p === null || p === 0) return null;
+    startPrices[k] = p;
+  }
+  return dates.map(d => {
+    let v = 0;
+    for (const k of keys) {
+      const p = fundPriceAt(k, d);
+      if (p === null) return null;
+      v += norm[k] * (p / startPrices[k]);
+    }
+    return v * 100;
+  });
+}
+
+function buildBenchmarkSeries(weights, dates) {
+  // Композит индексов: в ручном режиме — заданный пользователем,
+  // иначе — из бенчмарков фондов пропорционально их долям
+  const idxWeights = computeIndexWeights(weights);
+  const total = Object.values(idxWeights).reduce((a, b) => a + b, 0);
+  if (total <= 0) return null;
+  const norm = {};
+  Object.entries(idxWeights).forEach(([k, v]) => { if (v > 0) norm[k] = v / total; });
+  const keys = Object.keys(norm);
+  if (!keys.length) return null;
+  // start values
+  const startVals = {};
+  for (const k of keys) {
+    const rec = INDICES.find(r => r.date === dates[0]);
+    if (!rec || rec[k] === null) return null;
+    const rate = rubToBaseRate(dates[0], state.baseCurrency);
+    if (rate === null) return null;
+    startVals[k] = rec[k] * rate;
+  }
+  return dates.map(d => {
+    let v = 0;
+    const rec = INDICES.find(r => r.date === d);
+    if (!rec) return null;
+    const rate = rubToBaseRate(d, state.baseCurrency);
+    if (rate === null) return null;
+    for (const k of keys) {
+      if (rec[k] === null) return null;
+      v += norm[k] * (rec[k] * rate / startVals[k]);
+    }
+    return v * 100;
+  });
+}
+
+function calcMetrics(series, dates) {
+  if (!series || series.length < 2) return null;
+  const v0 = series[0], vN = series[series.length - 1];
+  const totalRet = vN / v0 - 1;
+  const days = Math.round((new Date(dates[dates.length - 1]) - new Date(dates[0])) / 86400000);
+  const years = days / 365;
+  const cagr = years > 0 ? Math.pow(vN / v0, 1 / years) - 1 : 0;
+  const rets = [];
+  for (let i = 1; i < series.length; i++) rets.push(series[i] / series[i - 1] - 1);
+  const mean = rets.reduce((a, b) => a + b, 0) / rets.length;
+  const variance = rets.reduce((a, b) => a + (b - mean) ** 2, 0) / rets.length;
+  const vol = Math.sqrt(variance) * Math.sqrt(12);
+  let peak = series[0], maxDD = 0;
+  for (const v of series) {
+    if (v > peak) peak = v;
+    const dd = v / peak - 1;
+    if (dd < maxDD) maxDD = dd;
+  }
+  return { totalRet, cagr, vol, maxDD, years };
+}
+
+function getInvestmentInBase(startDate) {
+  const rate = fxRate(state.amountCcy, state.baseCurrency, startDate);
+  if (rate === null) return 0;
+  return state.amount * rate;
+}
+
+// ============================================================
+// Render: donuts
+// ============================================================
+function renderDonuts(weights) {
+  const ccyMix = getCurrencyBreakdown(weights);
+
+  // ---- Allocation donut ----
+  const allocItems = Object.entries(weights)
+    .filter(([_, w]) => w > 0.001)
+    .sort((a, b) => b[1] - a[1]);
+
+  const allocLabels = allocItems.map(([k]) => FUNDS[k].meta.name);
+  const allocData = allocItems.map(([_, w]) => w);
+  const allocColors = allocItems.map(([k]) => ASSET_COLORS()[k] || '#666');
+
+  const allocCtx = document.getElementById('donutAlloc');
+  if (donutAllocChart) donutAllocChart.destroy();
+  const c = chartColors();
+  donutAllocChart = new Chart(allocCtx, {
+    type: 'doughnut',
+    data: { labels: allocLabels, datasets: [{ data: allocData, backgroundColor: allocColors, borderColor: 'transparent', borderWidth: 0, hoverOffset: 6 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: c.tooltipBg, borderColor: c.tooltipBorder, borderWidth: 1,
+          titleColor: c.tooltipTitle, bodyColor: c.tooltipBody, padding: 10,
+          callbacks: {
+            label: ctx => `${ctx.label}: ${ctx.parsed.toFixed(1)}%`
+          }
+        }
+      }
+    }
+  });
+
+  document.getElementById('donutAllocCenter').textContent = fmtMoneyCompact(state.amount, state.amountCcy);
+
+  // legend
+  const legendEl = document.getElementById('allocLegend');
+  legendEl.innerHTML = '';
+  allocItems.forEach(([k, w]) => {
+    const amt = state.amount * w / 100;
+    const div = document.createElement('div');
+    div.className = 'legend-row';
+    div.innerHTML = `
+      <span class="swatch" style="background:${ASSET_COLORS()[k] || '#666'}"></span>
+      <div class="legend-name">${FUNDS[k].meta.name}<small>${FUNDS[k].meta.currency} · ${FUNDS[k].meta.benchmark_label}</small></div>
+      <div class="legend-pct">${w.toFixed(1)}%</div>
+      <div class="legend-amount">${fmtMoneyCompact(amt, state.amountCcy)}</div>
+    `;
+    legendEl.appendChild(div);
+  });
+
+  // ---- Currency donut: 2 сегмента (Рубль / Валюта), валюта = USD+CNY+GLD ----
+  const rubTotal = ccyMix.RUB;
+  const valTotal = ccyMix.USD + ccyMix.CNY + ccyMix.GLD;
+  const cc = CCY_COLORS();
+  const rubColor = cc.RUB;
+  const valColor = cc.USD;  // основной "валютный" цвет
+
+  const ccyDonutData = [];
+  const ccyDonutLabels = [];
+  const ccyDonutColors = [];
+  if (rubTotal > 0.001) { ccyDonutData.push(rubTotal); ccyDonutLabels.push('Рубль'); ccyDonutColors.push(rubColor); }
+  if (valTotal > 0.001) { ccyDonutData.push(valTotal); ccyDonutLabels.push('Валюта'); ccyDonutColors.push(valColor); }
+
+  const ccyCtx = document.getElementById('donutCcy');
+  if (donutCcyChart) donutCcyChart.destroy();
+  donutCcyChart = new Chart(ccyCtx, {
+    type: 'doughnut',
+    data: { labels: ccyDonutLabels, datasets: [{ data: ccyDonutData, backgroundColor: ccyDonutColors, borderColor: 'transparent', borderWidth: 0, hoverOffset: 6 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: c.tooltipBg, borderColor: c.tooltipBorder, borderWidth: 1,
+          titleColor: c.tooltipTitle, bodyColor: c.tooltipBody, padding: 10,
+          callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed.toFixed(1)}%` }
+        }
+      }
+    }
+  });
+
+  // donut center: show RUB / VAL split
+  document.getElementById('donutCcyCenter').textContent = `${rubTotal.toFixed(0)} / ${valTotal.toFixed(0)}`;
+
+  // Легенда: рубль одной строкой, потом разделитель и валютная подгруппа
+  const ccyLegendEl = document.getElementById('ccyLegend');
+  ccyLegendEl.innerHTML = '';
+  const ccyNameMap = { RUB: 'Российский рубль', USD: 'Доллар США', CNY: 'Китайский юань', GLD: 'Золото' };
+
+  const addLegendRow = (color, name, sub, pct, amt) => {
+    const div = document.createElement('div');
+    div.className = 'legend-row';
+    div.innerHTML = `
+      <span class="swatch" style="background:${color}"></span>
+      <div class="legend-name">${name}${sub ? `<small>${sub}</small>` : ''}</div>
+      <div class="legend-pct">${pct.toFixed(1)}%</div>
+      <div class="legend-amount">${fmtMoneyCompact(amt, state.amountCcy)}</div>
+    `;
+    return div;
+  };
+
+  // Рубль
+  if (rubTotal > 0.001) {
+    ccyLegendEl.appendChild(addLegendRow(rubColor, 'Рубль', 'RUB', rubTotal, state.amount * rubTotal / 100));
+  }
+  // Валюта (заголовок-итог)
+  if (valTotal > 0.001) {
+    const valHeader = addLegendRow(valColor, 'Валюта', 'USD · CNY · GLD', valTotal, state.amount * valTotal / 100);
+    valHeader.classList.add('legend-row-header');
+    ccyLegendEl.appendChild(valHeader);
+    // Под-строки: USD/CNY/GLD только если > 0
+    ['USD', 'CNY', 'GLD'].forEach(c => {
+      const w = ccyMix[c];
+      if (w > 0.001) {
+        const sub = addLegendRow(cc[c], ccyNameMap[c], c, w, state.amount * w / 100);
+        sub.classList.add('legend-row-sub');
+        ccyLegendEl.appendChild(sub);
+      }
+    });
+  }
+
+  // subtitle hints
+  if (state.manual) {
+    document.getElementById('allocSubtitle').textContent = `Индивидуальный портфель · ${allocItems.length} фондов`;
+    const rubShare = getCurrencyBreakdown(weights).RUB;
+    document.getElementById('ccySubtitle').textContent = `Рубль ${rubShare.toFixed(0)} / Валюта ${(100 - rubShare).toFixed(0)}`;
+  } else if (state.risk === 'base') {
+    document.getElementById('allocSubtitle').textContent = `Базовый портфель · ${allocItems.length} фондов`;
+    document.getElementById('ccySubtitle').textContent = `Натуральный микс 50 / 50`;
+  } else {
+    document.getElementById('allocSubtitle').textContent = `${RISK_PROFILES[state.risk].name} · ${allocItems.length} фондов`;
+    document.getElementById('ccySubtitle').textContent = CCY_STRATEGIES[state.ccy].name;
+  }
+}
+
+// ============================================================
+// Render: KPIs + chart
+// ============================================================
+function renderKpisAndChart(weights, dates) {
+  const kpiStrip = document.getElementById('kpiStrip');
+  const periodSummary = document.getElementById('periodSummary');
+
+  if (!dates || dates.length < 2) {
+    kpiStrip.innerHTML = '';
+    periodSummary.textContent = 'недостаточно данных';
+    if (mainChart) { mainChart.data.labels = []; mainChart.data.datasets = []; mainChart.update(); }
+    return;
+  }
+
+  const fundSeries = buildPortfolioSeries(weights, dates);
+  const benchSeries = buildBenchmarkSeries(weights, dates);
+
+  // CPI
+  const cpiKey = { RUB: 'CPI_rub', USD: 'CPI_USD', CNY: 'CPI_cny' }[state.baseCurrency];
+  const cpiSeries = cpiKey ? buildCpiSeries(cpiKey, dates) : null;
+
+  const fm = fundSeries ? calcMetrics(fundSeries, dates) : null;
+  const bm = benchSeries ? calcMetrics(benchSeries, dates) : null;
+  const cm = cpiSeries ? calcMetrics(cpiSeries, dates) : null;
+
+  // Money result
+  const investedBase = getInvestmentInBase(dates[0]);
+  const endedBase = fm ? investedBase * (1 + fm.totalRet) : null;
+  const profit = endedBase !== null ? endedBase - investedBase : null;
+
+  // Period summary
+  const yrs = ((new Date(dates[dates.length - 1]) - new Date(dates[0])) / (365 * 86400000)).toFixed(2);
+  periodSummary.innerHTML = `<b>${dates[0]}</b> → <b>${dates[dates.length - 1]}</b> · ${yrs} лет · база <b>${state.baseCurrency}</b>`;
+
+  // KPIs
+  if (fm && profit !== null) {
+    const baseLabel = state.baseCurrency;
+    kpiStrip.innerHTML = `
+      <div class="kpi">
+        <div class="kpi-label">Сумма на старте</div>
+        <div class="kpi-value">${fmtMoneyCompact(investedBase, baseLabel)}</div>
+        <div class="kpi-sub">${fmtMoney(state.amount, state.amountCcy)}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Сумма на конец</div>
+        <div class="kpi-value">${fmtMoneyCompact(endedBase, baseLabel)}</div>
+        <div class="kpi-sub">портфель в ${baseLabel}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Финансовый результат</div>
+        <div class="kpi-value ${profit >= 0 ? 'pos' : 'neg'}">${profit >= 0 ? '+' : ''}${fmtMoneyCompact(profit, baseLabel)}</div>
+        <div class="kpi-sub ${fm.totalRet >= 0 ? 'pos' : 'neg'}" style="color:${fm.totalRet >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtPct(fm.totalRet)}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Среднегодовая доходность</div>
+        <div class="kpi-value ${fm.cagr >= 0 ? 'pos' : 'neg'}">${fmtPct(fm.cagr)}</div>
+        <div class="kpi-sub">бенчмарк ${bm ? fmtPct(bm.cagr) : '—'}${cm ? ' · инфляция ' + fmtPct(cm.cagr) : ''}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Максимальная просадка</div>
+        <div class="kpi-value neg">${fmtPct(fm.maxDD)}</div>
+        <div class="kpi-sub">волатильность ${fmtPct(fm.vol)}</div>
+      </div>
+    `;
+  } else {
+    kpiStrip.innerHTML = '';
+  }
+
+  // Chart datasets
+  const lineC = chartColors();
+  const accentRgba = (a) => {
+    // Парсим accent в RGB и возвращаем rgba — для прозрачной заливки под линией портфеля
+    const hex = lineC.accent.replace('#','');
+    const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+    return `rgba(${r},${g},${b},${a})`;
+  };
+  const datasets = [];
+  if (fundSeries && state.visible.portfolio) {
+    datasets.push({
+      label: 'Портфель ' + RISK_PROFILES[state.risk].name,
+      data: fundSeries,
+      borderColor: lineC.accent,
+      backgroundColor: accentRgba(0.08),
+      fill: true, tension: 0.25, borderWidth: 2.2, pointRadius: 0, pointHoverRadius: 4
+    });
+  }
+  if (benchSeries && state.visible.benchmark) {
+    datasets.push({
+      label: 'Композитный индекс',
+      data: benchSeries,
+      borderColor: lineC.blue,
+      backgroundColor: 'transparent',
+      fill: false, tension: 0.25, borderWidth: 2, borderDash: [6, 5], pointRadius: 0, pointHoverRadius: 4
+    });
+  }
+  if (cpiSeries && state.visible.inflation) {
+    datasets.push({
+      label: 'Инфляция (CPI ' + state.baseCurrency + ')',
+      data: cpiSeries,
+      borderColor: lineC.textDim,
+      backgroundColor: 'transparent',
+      fill: false, tension: 0.25, borderWidth: 1.5, borderDash: [2, 4], pointRadius: 0, pointHoverRadius: 3
+    });
+  }
+
+  if (mainChart) mainChart.destroy();
+  const mc = chartColors();
+  mainChart = new Chart(document.getElementById('mainChart'), {
+    type: 'line',
+    data: { labels: dates, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { color: mc.chartText, font: { size: 12 }, boxWidth: 14, padding: 14 }
+        },
+        tooltip: {
+          backgroundColor: mc.tooltipBg, borderColor: mc.tooltipBorder, borderWidth: 1,
+          titleColor: mc.tooltipTitle, bodyColor: mc.tooltipBody, padding: 12,
+          callbacks: {
+            label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + ' (' + ((ctx.parsed.y / 100 - 1) * 100).toFixed(2) + '%)'
+          }
+        }
+      },
+      scales: {
+        y: {
+          grid: { color: mc.chartGrid, drawBorder: false },
+          ticks: { color: mc.textDim, font: { size: 11 }, callback: v => v.toFixed(0) },
+          border: { display: false }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { color: mc.textDim, font: { size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 },
+          border: { display: false }
+        }
+      }
+    }
+  });
+
+  // === Сравнительная таблица под графиком: Портфель / Индекс / Инфляция ===
+  const cmpEl = document.getElementById('compareTable');
+  if (cmpEl) {
+    const baseCcy = state.baseCurrency;
+    const cls = (v) => v >= 0 ? 'pos' : 'neg';
+    const sgn = (v) => v >= 0 ? '+' : '';
+
+    // Денежные значения для индекса/инфляции — гипотетически: «как если бы вся инвестиция шла в этот ряд»
+    const investedB = getInvestmentInBase(dates[0]);
+    const endedF = fm ? investedB * (1 + fm.totalRet) : null;
+    const profitF = fm ? endedF - investedB : null;
+    const endedI = bm ? investedB * (1 + bm.totalRet) : null;
+    const profitI = bm ? endedI - investedB : null;
+    const endedC = cm ? investedB * (1 + cm.totalRet) : null;
+    const profitC = cm ? endedC - investedB : null;
+
+    const cellPct = (m, key) => m ? `<span class="${cls(m[key])}">${(m[key]*100).toFixed(2)}%</span>` : '<span class="empty">—</span>';
+    const cellMaxDD = (m) => m ? `<span class="neg">${(m.maxDD*100).toFixed(2)}%</span>` : '<span class="empty">—</span>';
+    const cellMoney = (v) => v !== null ? `<span class="strong">${fmtMoneyCompact(v, baseCcy)}</span>` : '<span class="empty">—</span>';
+    const cellProfit = (v) => v !== null ? `<span class="${cls(v)}">${sgn(v)}${fmtMoneyCompact(v, baseCcy)}</span>` : '<span class="empty">—</span>';
+
+    const portfolioName = state.risk === 'base'
+      ? 'Базовый портфель'
+      : 'Портфель «' + RISK_PROFILES[state.risk].name + '»';
+
+    cmpEl.innerHTML = `
+      <thead>
+        <tr>
+          <th>Параметр</th>
+          <th><span class="col-marker" style="background:${lineC.accent}"></span>${portfolioName}</th>
+          <th><span class="col-marker" style="background:${lineC.blue}"></span>Композитный индекс</th>
+          <th><span class="col-marker" style="background:${lineC.textDim}"></span>Инфляция (${baseCcy})</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Сумма на старте</td>
+          <td>${cellMoney(investedB)}</td>
+          <td>${cellMoney(investedB)}</td>
+          <td>${cellMoney(investedB)}</td>
+        </tr>
+        <tr>
+          <td>Сумма на конец</td>
+          <td>${cellMoney(endedF)}</td>
+          <td>${cellMoney(endedI)}</td>
+          <td>${cellMoney(endedC)}</td>
+        </tr>
+        <tr>
+          <td>Финансовый результат</td>
+          <td>${cellProfit(profitF)}</td>
+          <td>${cellProfit(profitI)}</td>
+          <td>${cellProfit(profitC)}</td>
+        </tr>
+        <tr>
+          <td>Доходность за период</td>
+          <td>${cellPct(fm, 'totalRet')}</td>
+          <td>${cellPct(bm, 'totalRet')}</td>
+          <td>${cellPct(cm, 'totalRet')}</td>
+        </tr>
+        <tr>
+          <td>Среднегодовая доходность</td>
+          <td>${cellPct(fm, 'cagr')}</td>
+          <td>${cellPct(bm, 'cagr')}</td>
+          <td>${cellPct(cm, 'cagr')}</td>
+        </tr>
+        <tr>
+          <td>Волатильность годовая</td>
+          <td>${fm ? (fm.vol*100).toFixed(2)+'%' : '<span class="empty">—</span>'}</td>
+          <td>${bm ? (bm.vol*100).toFixed(2)+'%' : '<span class="empty">—</span>'}</td>
+          <td>${cm ? (cm.vol*100).toFixed(2)+'%' : '<span class="empty">—</span>'}</td>
+        </tr>
+        <tr>
+          <td>Максимальная просадка</td>
+          <td>${cellMaxDD(fm)}</td>
+          <td>${cellMaxDD(bm)}</td>
+          <td>${cellMaxDD(cm)}</td>
+        </tr>
+      </tbody>
+    `;
+  }
+}
+
+// ============================================================
+// Render: components & FX tables
+// ============================================================
+function renderComponentTable(weights, dates) {
+  const t = document.getElementById('componentTable');
+  if (!dates || dates.length < 2) { t.innerHTML = ''; return; }
+  const base = state.baseCurrency;
+  const investedBase = getInvestmentInBase(dates[0]);
+  const wTotal = Object.values(weights).reduce((a, b) => a + b, 0);
+  const days = Math.round((new Date(dates[dates.length - 1]) - new Date(dates[0])) / 86400000);
+  const years = days / 365;
+
+  const rows = [];
+  let endTotal = 0;
+
+  for (const [k, w] of Object.entries(weights)) {
+    if (w <= 0.001) continue;
+    const normW = w / wTotal;
+    const amt0 = investedBase * normW;
+    const p0 = fundPriceAt(k, dates[0]);
+    const pN = fundPriceAt(k, dates[dates.length - 1]);
+    if (!p0 || !pN) { rows.push({ k, w, amt0, fail: true }); continue; }
+    const totalRet = pN / p0 - 1;
+    const amtN = amt0 * (1 + totalRet);
+    endTotal += amtN;
+    const series = dates.map(d => fundPriceAt(k, d));
+    const m = calcMetrics(series, dates);
+    rows.push({ k, w, normW, amt0, amtN, totalRet, m });
+  }
+
+  let html = `<thead>
+    <tr>
+      <th>Фонд</th>
+      <th>Доля</th>
+      <th>Сумма на старте</th>
+      <th>Сумма на конец</th>
+      <th>Результат</th>
+      <th>Доходность</th>
+      <th>CAGR</th>
+      <th>Волатильность</th>
+      <th>Макс. просадка</th>
+      <th>Вклад в портфель</th>
+    </tr></thead><tbody>`;
+
+  for (const r of rows) {
+    if (r.fail) {
+      html += `<tr><td class="fund-name">${FUNDS[r.k].meta.name}<span class="ck">${r.k}</span></td>
+        <td>${r.w.toFixed(1)}%</td><td>${fmtMoney(r.amt0, base)}</td>
+        <td colspan="7" class="muted">недостаточно данных</td></tr>`;
+      continue;
+    }
+    const profit = r.amtN - r.amt0;
+    const contribPP = r.normW * r.totalRet * 100;
+    html += `<tr>
+      <td class="fund-name">${FUNDS[r.k].meta.name}<span class="ck">${r.k}</span></td>
+      <td>${r.w.toFixed(1)}%</td>
+      <td>${fmtMoney(r.amt0, base)}</td>
+      <td>${fmtMoney(r.amtN, base)}</td>
+      <td class="${profit >= 0 ? 'pos' : 'neg'}">${profit >= 0 ? '+' : ''}${fmtMoney(profit, base)}</td>
+      <td class="${r.totalRet >= 0 ? 'pos' : 'neg'}">${(r.totalRet * 100).toFixed(2)}%</td>
+      <td class="${r.m.cagr >= 0 ? 'pos' : 'neg'}">${(r.m.cagr * 100).toFixed(2)}%</td>
+      <td>${(r.m.vol * 100).toFixed(2)}%</td>
+      <td class="neg">${(r.m.maxDD * 100).toFixed(2)}%</td>
+      <td class="${contribPP >= 0 ? 'pos' : 'neg'}">${contribPP >= 0 ? '+' : ''}${contribPP.toFixed(2)} п.п.</td>
+    </tr>`;
+  }
+
+  if (rows.every(r => !r.fail) && rows.length) {
+    const totalRet = (endTotal - investedBase) / investedBase;
+    const cagr = years > 0 ? Math.pow(endTotal / investedBase, 1 / years) - 1 : 0;
+    const profit = endTotal - investedBase;
+    html += `<tr class="total-row">
+      <td>Итого по портфелю</td>
+      <td>${wTotal.toFixed(1)}%</td>
+      <td>${fmtMoney(investedBase, base)}</td>
+      <td>${fmtMoney(endTotal, base)}</td>
+      <td class="${profit >= 0 ? 'pos' : 'neg'}">${profit >= 0 ? '+' : ''}${fmtMoney(profit, base)}</td>
+      <td class="${totalRet >= 0 ? 'pos' : 'neg'}">${(totalRet * 100).toFixed(2)}%</td>
+      <td class="${cagr >= 0 ? 'pos' : 'neg'}">${(cagr * 100).toFixed(2)}%</td>
+      <td colspan="2"></td>
+      <td class="${totalRet >= 0 ? 'pos' : 'neg'}">${(totalRet * 100).toFixed(2)} п.п.</td>
+    </tr>`;
+  }
+
+  html += '</tbody>';
+  t.innerHTML = html;
+}
+
+function renderFxTable(weights, dates) {
+  const t = document.getElementById('fxTable');
+  const note = document.getElementById('fxNote');
+  if (!dates || dates.length < 2) { t.innerHTML = ''; note.innerHTML = ''; return; }
+  const invCcy = state.amountCcy;
+  const wTotal = Object.values(weights).reduce((a, b) => a + b, 0);
+  const startDate = dates[0], endDate = dates[dates.length - 1];
+
+  let html = `<thead>
+    <tr>
+      <th rowspan="2">Фонд</th>
+      <th rowspan="2">Родная валюта</th>
+      <th rowspan="2">Сумма на старте, ${invCcy}</th>
+      <th rowspan="2">Купленные паи</th>
+      <th colspan="2">Доходность фонда</th>
+      <th colspan="2">Эффект курса → ${invCcy}</th>
+      <th colspan="2">Итого, ${invCcy}</th>
+    </tr>
+    <tr>
+      <th>%</th><th>в деньгах</th>
+      <th>Δ курса</th><th>в деньгах</th>
+      <th>%</th><th>сумма</th>
+    </tr></thead><tbody>`;
+
+  let sumI = 0, sumPN = 0, sumPF = 0, sumE = 0; let allOk = true;
+
+  for (const [k, w] of Object.entries(weights)) {
+    if (w <= 0.001) continue;
+    const fund = FUNDS[k];
+    const native = fund.meta.currency;
+    const normW = w / wTotal;
+    const investedInCcy = state.amount * normW;
+    const pNative0 = fundPriceInCurrency(k, startDate, native);
+    const pNativeN = fundPriceInCurrency(k, endDate, native);
+    const fx0 = fxRate(native, invCcy, startDate);
+    const fxN = fxRate(native, invCcy, endDate);
+
+    if (!pNative0 || !pNativeN || pNative0 === 0 || fx0 === null || fxN === null) {
+      html += `<tr><td class="fund-name">${fund.meta.name}<span class="ck">${k}</span></td>
+        <td>${native}</td><td>${fmtMoney(investedInCcy, invCcy)}</td>
+        <td colspan="7" class="muted">недостаточно данных</td></tr>`;
+      allOk = false;
+      continue;
+    }
+
+    const investedNative = investedInCcy / fx0;
+    const N = investedNative / pNative0;
+    const ended = N * pNativeN * fxN;
+    const profitNative = N * (pNativeN - pNative0) * fxN;
+    const profitFx = investedNative * (fxN - fx0);
+    const rNative = pNativeN / pNative0 - 1;
+    const dFx = (fxN - fx0) / fx0;
+    const rTotal = ended / investedInCcy - 1;
+    const fxIsZero = native === invCcy;
+
+    sumI += investedInCcy; sumPN += profitNative; sumPF += profitFx; sumE += ended;
+
+    html += `<tr>
+      <td class="fund-name">${fund.meta.name}<span class="ck">${k}</span></td>
+      <td>${native}</td>
+      <td>${fmtMoney(investedInCcy, invCcy)}</td>
+      <td>${N.toLocaleString('ru-RU', {maximumFractionDigits:2})}</td>
+      <td class="${rNative >= 0 ? 'pos' : 'neg'}">${(rNative * 100).toFixed(2)}%</td>
+      <td class="${profitNative >= 0 ? 'pos' : 'neg'}">${profitNative >= 0 ? '+' : ''}${fmtMoney(profitNative, invCcy)}</td>
+      <td class="${(fxIsZero ? 0 : dFx) >= 0 ? 'pos' : 'neg'}">${fxIsZero ? '—' : (dFx * 100).toFixed(2) + '%'}</td>
+      <td class="${profitFx >= 0 ? 'pos' : 'neg'}">${fxIsZero ? '—' : (profitFx >= 0 ? '+' : '') + fmtMoney(profitFx, invCcy)}</td>
+      <td class="${rTotal >= 0 ? 'pos' : 'neg'}">${(rTotal * 100).toFixed(2)}%</td>
+      <td>${fmtMoney(ended, invCcy)}</td>
+    </tr>`;
+  }
+
+  if (allOk) {
+    const profit = sumE - sumI, ret = profit / sumI;
+    const sN = profit ? sumPN / profit : 0, sF = profit ? sumPF / profit : 0;
+    html += `<tr class="total-row">
+      <td>Итого</td><td>—</td><td>${fmtMoney(sumI, invCcy)}</td><td>—</td>
+      <td>—</td>
+      <td class="${sumPN >= 0 ? 'pos' : 'neg'}">${sumPN >= 0 ? '+' : ''}${fmtMoney(sumPN, invCcy)}</td>
+      <td>—</td>
+      <td class="${sumPF >= 0 ? 'pos' : 'neg'}">${sumPF >= 0 ? '+' : ''}${fmtMoney(sumPF, invCcy)}</td>
+      <td class="${ret >= 0 ? 'pos' : 'neg'}">${(ret * 100).toFixed(2)}%</td>
+      <td>${fmtMoney(sumE, invCcy)}</td>
+    </tr>`;
+    note.innerHTML = `Из общего результата <b>${fmtMoney(profit, invCcy)}</b>: ${(sN * 100).toFixed(0)}% — работа фондов, ${(sF * 100).toFixed(0)}% — изменение курсов.`;
+  } else {
+    note.innerHTML = '';
+  }
+
+  html += '</tbody>';
+  t.innerHTML = html;
+}
+
+// ============================================================
+// Master update
+// ============================================================
+function updateAll() {
+  let weights = computeAllocation();
+
+  // В ручном режиме доли могут не суммироваться в 100% — нормализуем
+  // для корректного отображения денежных сумм в донатах, легенде и таблицах.
+  const wSum = Object.values(weights).reduce((a, b) => a + b, 0);
+  if (state.manual && wSum > 0 && Math.abs(wSum - 100) > 0.05) {
+    const normalized = {};
+    Object.entries(weights).forEach(([k, w]) => { normalized[k] = w / wSum * 100; });
+    weights = normalized;
+  }
+
+  const dates = findValidDates(weights);
+
+  document.getElementById('amountHint').textContent = fmtMoney(state.amount, state.amountCcy);
+  document.getElementById('brandMeta').textContent = state.manual
+    ? 'Индивидуальный портфель'
+    : (state.risk === 'base'
+        ? 'Базовый портфель'
+        : RISK_PROFILES[state.risk].name + ' · ' + CCY_STRATEGIES[state.ccy].name);
+
+  renderDonuts(weights);
+  renderKpisAndChart(weights, dates);
+  renderComponentTable(weights, dates);
+  renderFxTable(weights, dates);
+
+  // Синхронизируем бейджи тоталов панели (если она построена)
+  if (state.manual && document.getElementById('manualFundsList').children.length) {
+    syncManualInputs();
+  }
+}
+
+// ============================================================
+// Event handlers
+// ============================================================
+// Парсинг суммы из строки с пробелами/запятыми/точками-разделителями тысяч
+function parseAmountInput(str) {
+  if (!str) return 0;
+  // Убираем все пробелы (обычные и неразрывные), валютные символы
+  const cleaned = String(str).replace(/[\s\u00A0]/g, '').replace(/[^\d.,-]/g, '');
+  // Заменяем запятую на точку (десятичный разделитель)
+  const normalized = cleaned.replace(',', '.');
+  const n = parseFloat(normalized);
+  return isNaN(n) ? 0 : n;
+}
+
+// Форматирование числа с пробелами между разрядов (для значения инпута)
+function formatAmountForInput(n) {
+  if (!n || isNaN(n)) return '';
+  return Math.round(n).toLocaleString('ru-RU').replace(/,/g, ' ');
+}
+
+const amountInputEl = document.getElementById('amountInput');
+amountInputEl.addEventListener('input', e => {
+  // Запоминаю позицию курсора
+  const inp = e.target;
+  const oldVal = inp.value;
+  const cursorPos = inp.selectionStart;
+
+  const parsed = parseAmountInput(oldVal);
+  state.amount = parsed;
+
+  // Форматирую обратно с пробелами
+  const newVal = formatAmountForInput(parsed);
+  if (newVal !== oldVal) {
+    // Считаю, сколько пробелов было до курсора в старом значении и сколько должно быть в новом
+    const oldDigitsBeforeCursor = oldVal.slice(0, cursorPos).replace(/[\s\u00A0]/g, '').length;
+    inp.value = newVal;
+    // Восстанавливаю курсор: нахожу позицию после столько же цифр в новом значении
+    let newCursor = 0, digitsCount = 0;
+    while (newCursor < newVal.length && digitsCount < oldDigitsBeforeCursor) {
+      if (/\d/.test(newVal[newCursor])) digitsCount++;
+      newCursor++;
+    }
+    inp.setSelectionRange(newCursor, newCursor);
+  }
+  updateAll();
+});
+// На фокус — выделяем всё для удобной замены
+amountInputEl.addEventListener('focus', e => e.target.select());
+
+// Универсальный обработчик ccy-pills: синхронизирует state.{target} и подсветку
+document.querySelectorAll('.ccy-pills').forEach(group => {
+  const target = group.dataset.target;  // 'amountCcy' или 'baseCurrency'
+  group.querySelectorAll('.ccy-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = btn.dataset.ccy;
+      if (state[target] === val) return;
+      state[target] = val;
+      group.querySelectorAll('.ccy-pill').forEach(b => {
+        b.classList.toggle('active', b.dataset.ccy === val);
+      });
+      updateAll();
+    });
+  });
+});
+
+// Синхронизация активных кнопок и блокировка валюты для базового
+function syncRiskCcyUI() {
+  const isManual = state.manual;
+  document.querySelectorAll('#riskChoices .choice-btn').forEach(b => {
+    b.classList.toggle('active', !isManual && b.dataset.risk === state.risk);
+    b.disabled = isManual;
+    b.classList.toggle('disabled', isManual);
+  });
+  const isBase = state.risk === 'base';
+  document.querySelectorAll('#ccyChoices .choice-btn').forEach(b => {
+    b.classList.toggle('active', !isManual && !isBase && b.dataset.ccy === state.ccy);
+    b.disabled = isManual || isBase;
+    b.classList.toggle('disabled', isManual || isBase);
+  });
+  // Подпись step 2 и step 3 — гаснут в ручном режиме
+  const step2card = document.querySelector('[data-step="2"]');
+  const step3card = document.querySelector('[data-step="3"]');
+  if (step2card) step2card.classList.toggle('inactive-manual', isManual);
+  if (step3card) {
+    step3card.classList.toggle('inactive', isBase && !isManual);
+    step3card.classList.toggle('inactive-manual', isManual);
+  }
+}
+
+document.querySelectorAll('#riskChoices .choice-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.disabled) return;
+    state.risk = btn.dataset.risk;
+    syncRiskCcyUI();
+    updateAll();
+  });
+});
+document.querySelectorAll('#ccyChoices .choice-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.disabled) return;
+    state.ccy = btn.dataset.ccy;
+    syncRiskCcyUI();
+    updateAll();
+  });
+});
+
+document.querySelectorAll('.toggle-pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    btn.classList.toggle('active');
+    state.visible[btn.dataset.line] = btn.classList.contains('active');
+    updateAll();
+  });
+});
+
+window.toggleColl = function(id) {
+  const el = document.getElementById(id);
+  el.dataset.open = el.dataset.open === 'true' ? 'false' : 'true';
+};
+
+// Theme toggle
+function setTheme(theme) {
+  if (theme === 'dark') {
+    document.documentElement.dataset.theme = 'dark';
+  } else {
+    delete document.documentElement.dataset.theme;
+  }
+  document.querySelectorAll('.theme-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.themeSet === theme);
+  });
+  // Перерендерить чарты, чтобы цвета (тултипы, оси, фоны) подхватили новые CSS-переменные
+  updateAll();
+}
+document.querySelectorAll('.theme-btn').forEach(btn => {
+  btn.addEventListener('click', () => setTheme(btn.dataset.themeSet));
+});
+
+// ============================================================
+// Export: PDF, Excel, Email template
+// ============================================================
+
+// PDF — через системный диалог печати браузера. CSS @media print подготовлен.
+document.getElementById('exportPdfBtn').addEventListener('click', () => {
+  // Раскрываю collapsibles? Нет — печатаются только элементы без `display:none`,
+  // в @media print они скрыты, печатается только верх.
+  window.print();
+});
+
+// Excel — формирую .xlsx через SheetJS
+document.getElementById('exportXlsxBtn').addEventListener('click', () => {
+  const weights = computeAllocation();
+  const ccyMix = getCurrencyBreakdown(weights);
+  const profileName = state.risk === 'base'
+    ? 'Базовый'
+    : RISK_PROFILES[state.risk].name + ' · ' + CCY_STRATEGIES[state.ccy].name;
+
+  // Лист 1: параметры
+  const paramRows = [
+    ['Подбор инвестиционной стратегии — Astra AM'],
+    [''],
+    ['Параметр', 'Значение'],
+    ['Сумма инвестиций', `${formatAmountForInput(state.amount)} ${state.amountCcy}`],
+    ['Риск-профиль', RISK_PROFILES[state.risk].name],
+    ['Валютная стратегия', state.risk === 'base' ? 'Натуральный микс 50/50' : CCY_STRATEGIES[state.ccy].name],
+    [''],
+    ['Дата формирования рекомендации', new Date().toLocaleDateString('ru-RU')]
+  ];
+
+  // Лист 2: аллокация
+  const allocRows = [
+    ['Фонд', 'Тикер', 'Родная валюта', 'Доля, %', `Сумма, ${state.amountCcy}`]
+  ];
+  Object.entries(weights)
+    .filter(([_, w]) => w > 0.001)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([k, w]) => {
+      const fund = FUNDS[k];
+      const amt = state.amount * w / 100;
+      allocRows.push([fund.meta.name, k, fund.meta.currency, w.toFixed(1), Math.round(amt)]);
+    });
+  allocRows.push(['Итого', '', '', '100.0', state.amount]);
+
+  // Лист 3: валютный микс
+  const ccyRows = [
+    ['Валюта', 'Доля, %', `Сумма, ${state.amountCcy}`]
+  ];
+  const ccyNameMap = { RUB: 'Российский рубль', USD: 'Доллар США', CNY: 'Китайский юань', GLD: 'Золото' };
+  Object.entries(ccyMix).filter(([_, w]) => w > 0.001).forEach(([c, w]) => {
+    const amt = state.amount * w / 100;
+    ccyRows.push([ccyNameMap[c] + ' (' + c + ')', w.toFixed(1), Math.round(amt)]);
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.aoa_to_sheet(paramRows);
+  ws1['!cols'] = [{ wch: 36 }, { wch: 36 }];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Параметры');
+
+  const ws2 = XLSX.utils.aoa_to_sheet(allocRows);
+  ws2['!cols'] = [{ wch: 38 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Аллокация по фондам');
+
+  const ws3 = XLSX.utils.aoa_to_sheet(ccyRows);
+  ws3['!cols'] = [{ wch: 26 }, { wch: 10 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(wb, ws3, 'Валютный микс');
+
+  const fileName = `Astra_${RISK_PROFILES[state.risk].name}_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+});
+
+// Шаблон письма — открываю модалку с готовым текстом
+document.getElementById('exportEmailBtn').addEventListener('click', () => {
+  const weights = computeAllocation();
+  const ccyMix = getCurrencyBreakdown(weights);
+  const profileName = RISK_PROFILES[state.risk].name;
+  const ccyName = state.risk === 'base'
+    ? 'натуральный микс'
+    : CCY_STRATEGIES[state.ccy].name.toLowerCase();
+
+  const ccyNameMap = { RUB: 'российский рубль', USD: 'доллар США', CNY: 'китайский юань', GLD: 'золото' };
+
+  // Сортируем фонды по убыванию доли
+  const sortedFunds = Object.entries(weights)
+    .filter(([_, w]) => w > 0.001)
+    .sort((a, b) => b[1] - a[1]);
+
+  // Группировка по классам активов (упрощённо — по родной валюте + типу)
+  const byCcy = {};
+  sortedFunds.forEach(([k, w]) => {
+    const c = FUNDS[k].meta.currency;
+    if (!byCcy[c]) byCcy[c] = [];
+    byCcy[c].push({ key: k, weight: w, amount: state.amount * w / 100 });
+  });
+
+  // Текст письма
+  const lines = [];
+  lines.push('Здравствуйте!');
+  lines.push('');
+  lines.push(`Согласно нашему обсуждению, на основании выбранного риск-профиля «${profileName}»` +
+    (state.risk === 'base' ? '' : ` и валютной стратегии (${ccyName})`) +
+    ` и суммы инвестиций ${formatAmountForInput(state.amount)} ${state.amountCcy} мы подготовили рекомендацию по аллокации портфеля.`);
+  lines.push('');
+  lines.push('РЕКОМЕНДУЕМАЯ АЛЛОКАЦИЯ ПО ФОНДАМ:');
+  lines.push('');
+  sortedFunds.forEach(([k, w]) => {
+    const fund = FUNDS[k];
+    const amt = state.amount * w / 100;
+    const amtStr = formatAmountForInput(amt) + ' ' + state.amountCcy;
+    const wStr = w.toFixed(1) + '%';
+    lines.push(`  • ${fund.meta.name} (${fund.meta.currency}) — ${wStr.padStart(6)} — ${amtStr}`);
+  });
+  lines.push('');
+  lines.push('РАСПРЕДЕЛЕНИЕ ПО ВАЛЮТАМ:');
+  lines.push('');
+  Object.entries(ccyMix).filter(([_, w]) => w > 0.001).forEach(([c, w]) => {
+    const amt = state.amount * w / 100;
+    lines.push(`  • ${ccyNameMap[c]} (${c}) — ${w.toFixed(1)}% — ${formatAmountForInput(amt)} ${state.amountCcy}`);
+  });
+  lines.push('');
+  lines.push('РАСПРЕДЕЛЕНИЕ ПО КЛАССАМ АКТИВОВ:');
+  lines.push('');
+  // Золото (М3) учитывается как валютный актив, не отдельно.
+  const classMap = {
+    'Денежная ликвидность': ['Liq'],
+    'Рублёвые облигации':   ['R5', 'R1'],
+    'Российские акции':     ['Aplus', 'A12080'],
+    'Валютные активы':      ['D5', 'D1', 'VO', 'Yu5', 'M3']
+  };
+  Object.entries(classMap).forEach(([className, keys]) => {
+    const sum = keys.reduce((s, k) => s + (weights[k] || 0), 0);
+    if (sum > 0.001) {
+      const amt = state.amount * sum / 100;
+      lines.push(`  • ${className} — ${sum.toFixed(1)}% — ${formatAmountForInput(amt)} ${state.amountCcy}`);
+    }
+  });
+  lines.push('');
+  lines.push('Полный отчёт с диаграммами по классам активов, валютам и фондам прикрепляю отдельным файлом.');
+  lines.push('');
+  lines.push('Готов(-а) обсудить детали и ответить на любые вопросы.');
+  lines.push('');
+  lines.push('С уважением,');
+  lines.push('[Имя сейлза]');
+  lines.push('Astra AM');
+
+  document.getElementById('emailTextarea').value = lines.join('\n');
+  document.getElementById('emailModal').classList.add('show');
+});
+
+window.closeEmailModal = function() {
+  document.getElementById('emailModal').classList.remove('show');
+};
+
+window.copyEmailTemplate = function() {
+  const textarea = document.getElementById('emailTextarea');
+  textarea.select();
+  try {
+    document.execCommand('copy');
+    const fb = document.getElementById('copyFeedback');
+    fb.classList.add('show');
+    setTimeout(() => fb.classList.remove('show'), 2000);
+  } catch (e) {
+    alert('Не удалось скопировать. Выделите текст и нажмите Ctrl+C.');
+  }
+};
+
+// ============================================================
+// Manual portfolio panel
+// ============================================================
+
+// Пересчитать state.manualIndices из текущих state.manualFunds (по бенчмаркам)
+function recalcManualIndicesFromFunds() {
+  const idxW = {};
+  Object.entries(state.manualFunds).forEach(([k, w]) => {
+    if (w > 0) {
+      const b = FUNDS[k].meta.benchmark;
+      idxW[b] = (idxW[b] || 0) + w;
+    }
+  });
+  state.manualIndices = {};
+  INDEX_LIST.forEach(idx => {
+    state.manualIndices[idx.key] = idxW[idx.key] ?? 0;
+  });
+}
+
+// Построить ряды строк фондов и индексов (один раз)
+function buildManualRows() {
+  // Фонды
+  const fl = document.getElementById('manualFundsList');
+  fl.innerHTML = '';
+  Object.keys(FUNDS).forEach(k => {
+    const meta = FUNDS[k].meta;
+    const row = document.createElement('div');
+    row.className = 'manual-row';
+    row.innerHTML = `
+      <div class="mr-name">${meta.name}<small>${k} · ${meta.currency} · ${meta.benchmark_label}</small></div>
+      <input type="range" min="0" max="100" step="0.5" data-fund="${k}" data-kind="range">
+      <div class="mr-input">
+        <input type="text" inputmode="decimal" data-fund="${k}" data-kind="num">
+        <span>%</span>
+      </div>
+    `;
+    fl.appendChild(row);
+  });
+  // Индексы — read-only, зеркало портфеля
+  const il = document.getElementById('manualIdxList');
+  il.innerHTML = '';
+  INDEX_LIST.forEach(idx => {
+    const row = document.createElement('div');
+    row.className = 'manual-row readonly';
+    row.innerHTML = `
+      <div class="mr-name">${idx.name}<small>${idx.sub}</small></div>
+      <input type="range" min="0" max="100" step="0.5" data-idx="${idx.key}" data-kind="range" disabled tabindex="-1">
+      <div class="mr-input">
+        <input type="text" data-idx="${idx.key}" data-kind="num" readonly tabindex="-1">
+        <span>%</span>
+      </div>
+    `;
+    il.appendChild(row);
+  });
+
+  // Обработчики ввода — только фонды; при изменении пересчитываем индексы
+  fl.querySelectorAll('[data-fund]').forEach(el => {
+    const k = el.dataset.fund;
+    const handler = (val) => {
+      let v = parseFloat(String(val).replace(',', '.'));
+      if (isNaN(v)) v = 0;
+      v = Math.max(0, Math.min(100, v));
+      state.manualFunds[k] = v;
+      recalcManualIndicesFromFunds();   // бенчмарки следуют за портфелем
+      syncManualInputs();               // обновить обе колонки
+      updateAll();
+    };
+    if (el.dataset.kind === 'range') {
+      el.addEventListener('input', e => handler(e.target.value));
+    } else {
+      el.addEventListener('input', e => handler(e.target.value));
+      el.addEventListener('blur', e => { e.target.value = (state.manualFunds[k] ?? 0); });
+    }
+  });
+  // Индексы — обработчиков ввода нет (поля disabled/readonly)
+}
+
+// Синхронизировать значения инпутов/слайдеров со state + пересчитать тоталы
+function syncManualInputs(which) {
+  if (which === 'funds' || !which) {
+    let total = 0;
+    document.querySelectorAll('#manualFundsList [data-fund]').forEach(el => {
+      const k = el.dataset.fund;
+      const v = state.manualFunds[k] ?? 0;
+      if (el.dataset.kind === 'range') {
+        if (document.activeElement !== el) el.value = v;
+      } else {
+        if (document.activeElement !== el) el.value = v;
+      }
+    });
+    Object.values(state.manualFunds).forEach(v => total += v);
+    const badge = document.getElementById('manualFundsTotal');
+    badge.textContent = total.toFixed(1) + '%';
+    badge.classList.toggle('ok', Math.abs(total - 100) < 0.05);
+    badge.classList.toggle('warn', Math.abs(total - 100) >= 0.05);
+  }
+  if (which === 'indices' || !which) {
+    let total = 0;
+    document.querySelectorAll('#manualIdxList [data-idx]').forEach(el => {
+      const k = el.dataset.idx;
+      const v = state.manualIndices[k] ?? 0;
+      if (document.activeElement !== el) el.value = v;
+    });
+    Object.values(state.manualIndices).forEach(v => total += v);
+    const badge = document.getElementById('manualIdxTotal');
+    badge.textContent = total.toFixed(1) + '%';
+    badge.classList.toggle('ok', Math.abs(total - 100) < 0.05);
+    badge.classList.toggle('warn', Math.abs(total - 100) >= 0.05);
+  }
+}
+
+// Заполнить state.manualFunds текущей стратегией, state.manualIndices — бенчмарками
+function seedManualFromCurrent() {
+  // Фонды: берём текущую авто-аллокацию
+  const autoFunds = state.risk === 'base'
+    ? { ...ALLOCATIONS.base }
+    : { ...ALLOCATIONS[state.risk][state.ccy] };
+  state.manualFunds = {};
+  Object.keys(FUNDS).forEach(k => {
+    state.manualFunds[k] = autoFunds[k] ?? 0;
+  });
+  // Индексы: пересобираем из бенчмарков фондов
+  recalcManualIndicesFromFunds();
+}
+
+window.resetManualFunds = function() {
+  const autoFunds = state.risk === 'base'
+    ? { ...ALLOCATIONS.base }
+    : { ...ALLOCATIONS[state.risk][state.ccy] };
+  Object.keys(FUNDS).forEach(k => { state.manualFunds[k] = autoFunds[k] ?? 0; });
+  recalcManualIndicesFromFunds();   // индексы следуют за фондами
+  syncManualInputs();
+  updateAll();
+};
+
+window.toggleManualPanel = function() {
+  const panel = document.getElementById('manualPanel');
+  const bar = document.getElementById('manualBar');
+  const label = document.getElementById('manualToggleLabel');
+  const sub = document.getElementById('manualBarSub');
+
+  const willOpen = !panel.classList.contains('open');
+
+  if (willOpen) {
+    // Открываем панель + включаем ручной режим
+    if (!state.manual) {
+      state.manual = true;
+      seedManualFromCurrent();
+      buildManualRows();
+      syncManualInputs();
+    }
+    panel.classList.add('open');
+    bar.classList.add('active');
+    label.textContent = 'Скрыть настройку';
+    sub.textContent = 'Ручной режим активен — доли заданы вручную, выбор стратегии отключён';
+  } else {
+    // Просто скрываем панель, но ручной режим остаётся активным
+    panel.classList.remove('open');
+    label.textContent = 'Показать настройку';
+  }
+  syncRiskCcyUI();
+  updateAll();
+};
+
+// Кнопка "Вернуться к стратегии" — выход из ручного режима
+window.exitManualMode = function() {
+  state.manual = false;
+  const panel = document.getElementById('manualPanel');
+  const bar = document.getElementById('manualBar');
+  panel.classList.remove('open');
+  bar.classList.remove('active');
+  document.getElementById('manualToggleLabel').textContent = 'Настроить портфель';
+  document.getElementById('manualBarSub').textContent =
+    'Доли фондов и бенчмарков рассчитываются автоматически по выбранной стратегии';
+  syncRiskCcyUI();
+  updateAll();
+};
+
+// Init
+state.amount = parseAmountInput(amountInputEl.value);
+amountInputEl.value = formatAmountForInput(state.amount);
+renderDateSelects();
+syncRiskCcyUI();
+updateAll();
+</script>
+</body>
+</html>
