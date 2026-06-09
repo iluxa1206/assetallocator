@@ -45,3 +45,5 @@ catalog/backend/tests/fixtures/expected_vectors.json
 # Office temp
 ~$*.xlsx
 /catalog/.git.old/
+backup_*.dump
+*.dump
