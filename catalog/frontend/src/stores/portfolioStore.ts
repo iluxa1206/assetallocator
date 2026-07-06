@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { ExternalAsset } from "@/lib/types";
 
 export interface PortfolioParams {
   risk: string;
@@ -11,6 +12,7 @@ export interface PortfolioParams {
   manual: boolean;
   manual_funds: Record<string, number>;
   deposit_term_months: number;
+  external_assets: ExternalAsset[];
 }
 
 interface PortfolioStore extends PortfolioParams {
@@ -29,11 +31,12 @@ export const usePortfolioStore = create<PortfolioStore>((set) => ({
   base_currency: "RUB",
   start_date: "",
   end_date: "",
-  amount: 10_000_000,
+  amount: 1_000_000_000,
   amount_ccy: "RUB",
   manual: false,
   manual_funds: { ...DEFAULT_MANUAL_FUNDS },
   deposit_term_months: 6,
+  external_assets: [],
 
   set: (patch) => set((s) => ({ ...s, ...patch })),
   resetManual: () => set((s) => ({ ...s, manual_funds: { ...DEFAULT_MANUAL_FUNDS } })),

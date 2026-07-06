@@ -117,7 +117,7 @@ export function FundForm({ initial, isNew }: Props) {
     mutationFn: () => deleteFund(data.key!),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["funds"] });
-      router.push("/catalog/funds");
+      router.push("/catalog");
     },
   });
 
@@ -149,7 +149,7 @@ export function FundForm({ initial, isNew }: Props) {
             </button>
           )}
           <Link
-            href={isNew ? "/catalog/funds" : `/catalog/funds/${data.key}`}
+            href={isNew ? "/catalog" : `/catalog/funds/${data.key}`}
             className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-3 py-1.5 text-sm hover:bg-accent"
           >
             <X className="h-4 w-4" /> Отмена

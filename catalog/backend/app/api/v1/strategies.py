@@ -61,7 +61,7 @@ async def strategy_series(
     entries: {points, bench_points, ret, bench_ret, cagr, vol, max_dd, since, as_of, ...}.
     """
     empty = {
-        "points": [], "bench_points": None, "ret": None, "bench_ret": None,
+        "points": [], "bench_points": None, "dates": [], "ret": None, "bench_ret": None,
         "since": None, "currency": "RUB", "ytd_start_idx": None,
     }
     strat = await session.scalar(select(Strategy).where(Strategy.code == code))
@@ -144,6 +144,7 @@ async def strategy_series(
     return {
         "points": [port_norm[i] for i in idxs],
         "bench_points": [bench_norm[i] for i in idxs] if bench_norm is not None else None,
+        "dates": [d.isoformat() for d in ds_dates],
         "ret": ret,
         "bench_ret": bench_ret,
         "bench_label": "Композитный бенчмарк",

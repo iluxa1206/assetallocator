@@ -1,10 +1,18 @@
 import type { Metadata } from "next";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 
+const manrope = Manrope({
+  subsets: ["latin", "cyrillic"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Astra AM Sales Desk",
-  description: "Инвестиционный портфельный советник Astra AM",
+  title: "SAA · Strategy Asset Allocation",
+  description: "Конструктор модельных инвестиционных портфелей",
 };
 
 export default function RootLayout({
@@ -13,16 +21,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ru" className="h-full antialiased" suppressHydrationWarning>
+    <html lang="ru" className={`h-full antialiased ${manrope.variable}`} suppressHydrationWarning>
       <head>
-        <link
-          rel="stylesheet"
-          href="https://fonts.cdnfonts.com/css/gilroy-free"
-        />
-        <style>{`
-          :root { --font-sans: 'Gilroy', system-ui, sans-serif; }
-          body { font-family: var(--font-sans); }
-        `}</style>
         <script
           dangerouslySetInnerHTML={{
             __html: `

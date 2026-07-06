@@ -3,7 +3,12 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.calculations.allocation import compute_allocation, compute_index_weights, get_currency_breakdown
+from app.calculations.allocation import (
+    compute_allocation,
+    compute_index_weights,
+    get_currency_breakdown,
+    tilt_for_external,
+)
 from app.calculations.constants import FUND_META
 from app.calculations.cpi import build_cpi_series
 from app.calculations.deposit import build_deposit_series
@@ -12,15 +17,24 @@ from app.calculations.fx_rates import fx_rate, rub_to_base_rate
 from app.calculations.metrics import calc_metrics
 from app.calculations.series import build_benchmark_series, build_portfolio_series, find_valid_dates
 from app.models.deposit_rate import DepositRateMax10
-from app.models.fund import FundQuote
+from app.models.fund import Fund, FundQuote
 from app.models.market_data import MarketDataPoint
 from app.schemas.portfolio import (
+    ExternalItemOut,
     FundComponentOut,
     FxRowOut,
     MetricsOut,
     PortfolioRequest,
     PortfolioResponse,
 )
+
+# Our fund categories → unified asset class for whole-portfolio breakdown.
+_CATEGORY_TO_CLASS = {
+    "equities": "equity",
+    "bonds": "bond",
+    "alternative": "alternative",
+    "liquidity": "cash",
+}
 
 
 async def _load_market(session: AsyncSession) -> dict:
@@ -43,6 +57,11 @@ async def _load_fund_prices(session: AsyncSession) -> dict:
     for r in rows:
         prices.setdefault(r.fund_key, {})[r.date.isoformat()] = r.price_rub
     return prices
+
+
+async def _load_fund_categories(session: AsyncSession) -> dict[str, str]:
+    rows = (await session.execute(select(Fund.key, Fund.category))).all()
+    return {k: (c or "other") for k, c in rows}
 
 
 async def _load_deposit_rates(session: AsyncSession) -> list:
@@ -75,6 +94,29 @@ async def compute_portfolio(req: PortfolioRequest, session: AsyncSession) -> Por
         weights = {k: v / w_sum * 100 for k, v in weights_raw.items()}
     else:
         weights = dict(weights_raw)
+
+    # ── Model tilt for external holdings ──
+    # When the client already holds assets and a currency strategy is active, tilt our
+    # funds to complement them so the COMBINED portfolio hits the strategy's RUB/FX target.
+    external_adjusted = False
+    latest_row = market[all_dates[-1]] if all_dates else None
+    if req.external_assets and not req.manual and req.risk != "base" and latest_row:
+        amt_rate = fx_rate(req.amount_ccy, req.base_currency, latest_row)
+        our_base_now = req.amount * (amt_rate if amt_rate else 1.0)
+        ext_rub = 0.0
+        ext_fx = 0.0
+        for ext in req.external_assets:
+            if ext.amount <= 0:
+                continue
+            r = fx_rate(ext.currency, req.base_currency, latest_row)
+            val = ext.amount * (r if r else 1.0)
+            if ext.currency == "RUB":
+                ext_rub += val
+            else:
+                ext_fx += val
+        weights, external_adjusted = tilt_for_external(
+            weights, our_base_now, ext_rub, ext_fx, req.ccy
+        )
 
     # Resolve date range
     start = req.start_date or all_dates[0]
@@ -171,12 +213,44 @@ async def compute_portfolio(req: PortfolioRequest, session: AsyncSession) -> Por
         end_date=dates[-1] if dates else end,
         amount=req.amount,
         amount_ccy=req.amount_ccy,
+        base_ccy=req.base_currency,
         fund_prices=fund_prices,
         market=market,
     )
     fx_decomp = [FxRowOut(**r) for r in fx_rows_raw]
 
     currency_breakdown = get_currency_breakdown(weights)
+
+    # ── Whole-portfolio breakdown: our funds + client's external assets (base ccy) ──
+    fund_cats = await _load_fund_categories(session)
+    our_currency_base: dict[str, float] = {}
+    our_class_base: dict[str, float] = {}
+    for comp in fund_components:
+        our_currency_base[comp.native_currency] = (
+            our_currency_base.get(comp.native_currency, 0.0) + comp.invested_base
+        )
+        cls = _CATEGORY_TO_CLASS.get(fund_cats.get(comp.fund_key, "other"), "other")
+        our_class_base[cls] = our_class_base.get(cls, 0.0) + comp.invested_base
+
+    external_currency_base: dict[str, float] = {}
+    external_class_base: dict[str, float] = {}
+    external_items: list[ExternalItemOut] = []
+    external_total_base = 0.0
+    conv_row = end_row or start_row  # value external holdings at the latest available FX
+    for ext in req.external_assets:
+        if ext.amount <= 0:
+            continue
+        rate = fx_rate(ext.currency, req.base_currency, conv_row) if conv_row else 1.0
+        val = ext.amount * (rate if rate else 1.0)
+        external_total_base += val
+        external_currency_base[ext.currency] = external_currency_base.get(ext.currency, 0.0) + val
+        external_class_base[ext.asset_class] = external_class_base.get(ext.asset_class, 0.0) + val
+        external_items.append(ExternalItemOut(
+            name=ext.name or "Без названия",
+            currency=ext.currency,
+            asset_class=ext.asset_class,
+            base_value=val,
+        ))
 
     return PortfolioResponse(
         dates=dates,
@@ -195,4 +269,11 @@ async def compute_portfolio(req: PortfolioRequest, session: AsyncSession) -> Por
         available_dates=all_dates,
         invested_base=invested_base,
         ended_base=ended_base,
+        external_total_base=external_total_base,
+        our_currency_base=our_currency_base,
+        our_class_base=our_class_base,
+        external_currency_base=external_currency_base,
+        external_class_base=external_class_base,
+        external_items=external_items,
+        external_adjusted=external_adjusted,
     )

@@ -12,10 +12,10 @@ class FundMeta(TypedDict):
 
 FUND_META: dict[str, FundMeta] = {
     "R5":    {"name": "Хедж-фонд Р5",                        "native_currency": "RUB", "benchmark": "RGBITR",       "benchmark_label": "RGBITR"},
-    "D5":    {"name": "Хедж-фонд Д5",                        "native_currency": "USD", "benchmark": "CbondsZO_RUB", "benchmark_label": "Cbonds ЗО (RUB)"},
+    "D5":    {"name": "Хедж-фонд Д5",                        "native_currency": "USD", "benchmark": "CbondsZO_USD", "benchmark_label": "Cbonds ЗО (USD)"},
     "Yu5":   {"name": "Хедж-фонд Ю5",                        "native_currency": "CNY", "benchmark": "RUCNYTR_RUB",  "benchmark_label": "RUCNYTR (RUB)"},
-    "D1":    {"name": "Хедж-фонд Д1",                        "native_currency": "USD", "benchmark": "CbondsZO_RUB", "benchmark_label": "Cbonds ЗО (RUB)"},
-    "VO":    {"name": "Валютные облигации с выплатой дохода", "native_currency": "USD", "benchmark": "CbondsZO_RUB", "benchmark_label": "Cbonds ЗО (RUB)"},
+    "D1":    {"name": "Хедж-фонд Д1",                        "native_currency": "USD", "benchmark": "CbondsZO_USD", "benchmark_label": "Cbonds ЗО (USD)"},
+    "VO":    {"name": "Валютные облигации с выплатой дохода", "native_currency": "USD", "benchmark": "CbondsZO_USD", "benchmark_label": "Cbonds ЗО (USD)"},
     "Aplus": {"name": "Хедж-фонд А+",                        "native_currency": "RUB", "benchmark": "MCFTR",        "benchmark_label": "MCFTR"},
     "A12080":{"name": "Российские акции 120/80",              "native_currency": "RUB", "benchmark": "MCFTR",        "benchmark_label": "MCFTR"},
     "R1":    {"name": "Облигации Р1",                         "native_currency": "RUB", "benchmark": "RGBITR",       "benchmark_label": "RGBITR"},
@@ -50,7 +50,7 @@ CCY_STRATEGIES = {
     "val6040": {"name": "Валюта 60 / Рубль 40",  "rub": 40, "val": 60},
 }
 
-INDEX_KEYS = ["RUSFAR", "RGBITR", "MCFTR", "CbondsZO_RUB", "RUCNYTR_RUB", "GLDRUB"]
+INDEX_KEYS = ["RUSFAR", "RGBITR", "MCFTR", "CbondsZO_RUB", "CbondsZO_USD", "RUCNYTR_RUB", "GLDRUB"]
 
 # Maps benchmark key (used in FUND_META) → DB column name in MarketDataPoint
 INDEX_TO_COL: dict[str, str] = {
@@ -58,6 +58,7 @@ INDEX_TO_COL: dict[str, str] = {
     "RGBITR":       "rgbitr",
     "MCFTR":        "mcftr",
     "CbondsZO_RUB": "cbonds_zo_rub",
+    "CbondsZO_USD": "cbonds_zo_usd",
     "RUCNYTR_RUB":  "rucnytr_rub",
     "GLDRUB":       "gldrub",
 }

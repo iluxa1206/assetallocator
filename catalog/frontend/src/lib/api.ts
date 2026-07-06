@@ -50,6 +50,8 @@ export interface FundSeriesPoint {
   points: number[];
   /** Benchmark line normalized to 100 at the first point, aligned 1:1 with `points`. */
   bench_points?: number[] | null;
+  /** ISO dates aligned 1:1 with `points` — for chart x-axis + tooltip. */
+  dates?: string[];
   /** All return / metric fields are decimals (0.34 = 34%). Use `fmtPct` to render. */
   ret: number | null;
   bench_ret: number | null;

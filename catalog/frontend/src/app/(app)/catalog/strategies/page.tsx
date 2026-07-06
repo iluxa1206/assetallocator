@@ -7,22 +7,10 @@ import { fetchStrategies, fetchFunds, fetchMe } from "@/lib/api";
 import type { Fund, Strategy } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const RISK_META: Record<string, { label: string; Icon: LucideIcon; tone: string }> = {
-  base: {
-    label: "Базовый",
-    Icon: Layers,
-    tone: "border-slate-300/70 bg-gradient-to-br from-slate-50 to-white dark:from-slate-950 dark:to-background dark:border-slate-700",
-  },
-  cons: {
-    label: "Консервативный",
-    Icon: Shield,
-    tone: "border-emerald-200 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/40 dark:to-background dark:border-emerald-900",
-  },
-  agg: {
-    label: "Агрессивный",
-    Icon: Flame,
-    tone: "border-rose-200 bg-gradient-to-br from-rose-50 to-white dark:from-rose-950/40 dark:to-background dark:border-rose-900",
-  },
+const RISK_META: Record<string, { label: string; Icon: LucideIcon; accent: string }> = {
+  base: { label: "Базовый",        Icon: Layers, accent: "bg-muted-foreground/40" },
+  cons: { label: "Консервативный", Icon: Shield, accent: "bg-[var(--pos)]" },
+  agg:  { label: "Агрессивный",    Icon: Flame,  accent: "bg-[var(--neg)]" },
 };
 
 const CCY_LABEL: Record<string, string> = {
@@ -55,16 +43,16 @@ function CcyAllocBar({ comp, funds }: { comp: Record<string, number>; funds: Fun
           {Math.round(rubPct)}% / {Math.round(100 - rubPct)}%
         </span>
       </div>
-      <div className="flex h-2 rounded-full overflow-hidden ring-1 ring-border/70">
-        <div className="bg-blue-500/80 dark:bg-blue-400/80" style={{ width: `${rubPct}%` }} />
-        <div className="bg-indigo-500/80 dark:bg-indigo-400/80" style={{ width: `${100 - rubPct}%` }} />
+      <div className="flex h-1.5 rounded-full overflow-hidden ring-1 ring-border">
+        <div className="bg-primary" style={{ width: `${rubPct}%` }} />
+        <div className="bg-foreground/25" style={{ width: `${100 - rubPct}%` }} />
       </div>
       <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
         <span className="flex items-center gap-1">
-          <span className="h-1.5 w-1.5 rounded-full bg-blue-500" /> ₽ RUB
+          <span className="h-1.5 w-1.5 rounded-full bg-primary" /> ₽ RUB
         </span>
         <span className="flex items-center gap-1">
-          <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" /> FX
+          <span className="h-1.5 w-1.5 rounded-full bg-foreground/25" /> FX
         </span>
       </div>
     </div>
@@ -80,10 +68,11 @@ function StrategyHeroCard({ s, funds }: { s: Strategy; funds: Fund[] | undefined
     <Link
       href={`/catalog/strategies/${s.code}`}
       className={cn(
-        "group flex flex-col aspect-[4/3] rounded-xl border p-4 transition-all hover:shadow-md hover:-translate-y-0.5",
-        meta.tone,
+        "group relative flex flex-col aspect-[4/3] glossy rounded-lg p-4 overflow-hidden",
+        "transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_44px_-14px_rgba(14,20,40,0.28)]",
       )}
     >
+      <span className={cn("absolute left-0 top-0 bottom-0 w-[3px]", meta.accent)} />
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.1em] text-muted-foreground min-w-0">
           <Icon className="h-3 w-3 shrink-0" strokeWidth={2} />
@@ -123,7 +112,20 @@ export default function StrategiesListPage() {
   const { data: funds } = useQuery({ queryKey: ["funds"], queryFn: () => fetchFunds() });
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
 
-  if (isLoading) return <div className="text-muted-foreground text-sm">Загрузка…</div>;
+  if (isLoading) return (
+    <div className="space-y-10">
+      {[0, 1].map((g) => (
+        <div key={g} className="space-y-4">
+          <div className="h-4 w-32 rounded bg-muted animate-pulse" />
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="aspect-[4/3] rounded-xl border border-border bg-card animate-pulse" />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
   if (isError || !data) return <div className="text-destructive text-sm">Не удалось загрузить стратегии</div>;
 
   const groups = new Map<string, Strategy[]>();

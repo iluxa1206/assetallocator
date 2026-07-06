@@ -5,6 +5,21 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class ExternalAsset(BaseModel):
+    """Asset the client already holds outside our management — for whole-portfolio context."""
+    name: str = ""
+    amount: float = 0.0
+    currency: str = "RUB"        # RUB | USD | CNY | GLD
+    asset_class: str = "other"   # equity | bond | alternative | cash | realty | other
+
+
+class ExternalItemOut(BaseModel):
+    name: str
+    currency: str
+    asset_class: str
+    base_value: float            # value in base_currency
+
+
 class PortfolioRequest(BaseModel):
     risk: str = "base"           # base | cons | agg
     ccy: str = "equal"           # rub6040 | equal | val6040 (ignored for base)
@@ -17,6 +32,7 @@ class PortfolioRequest(BaseModel):
     manual_funds: dict[str, float] | None = None
     manual_index_weights: dict[str, float] | None = None
     deposit_term_months: int = 6   # capitalization period for synthetic deposit benchmark
+    external_assets: list[ExternalAsset] = Field(default_factory=list)
 
 
 class MetricsOut(BaseModel):
@@ -74,3 +90,11 @@ class PortfolioResponse(BaseModel):
     available_dates: list[str]
     invested_base: float | None     # amount in base_currency at start_date
     ended_base: float | None        # ending portfolio value in base_currency
+    # Whole-portfolio context (our funds + client's external assets), values in base_currency.
+    external_total_base: float = 0.0
+    our_currency_base: dict[str, float] = Field(default_factory=dict)
+    our_class_base: dict[str, float] = Field(default_factory=dict)
+    external_currency_base: dict[str, float] = Field(default_factory=dict)
+    external_class_base: dict[str, float] = Field(default_factory=dict)
+    external_items: list[ExternalItemOut] = Field(default_factory=list)
+    external_adjusted: bool = False   # fund weights tilted to complement external holdings

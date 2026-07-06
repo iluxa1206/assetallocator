@@ -53,7 +53,40 @@ export interface PortfolioResponse {
   available_dates: string[];
   invested_base: number | null;
   ended_base: number | null;
+  external_total_base: number;
+  our_currency_base: Record<string, number>;
+  our_class_base: Record<string, number>;
+  external_currency_base: Record<string, number>;
+  external_class_base: Record<string, number>;
+  external_items: ExternalItem[];
+  external_adjusted: boolean;
 }
+
+export interface ExternalItem {
+  name: string;
+  currency: string;
+  asset_class: string;
+  base_value: number;
+}
+
+export interface ExternalAsset {
+  name: string;
+  amount: number;
+  currency: string;     // RUB | USD | CNY | GLD
+  asset_class: string;  // equity | bond | alternative | cash | realty | other
+}
+
+export const ASSET_CLASSES: { key: string; label: string }[] = [
+  { key: "equity",      label: "Акции" },
+  { key: "bond",        label: "Облигации" },
+  { key: "alternative", label: "Альтернатива" },
+  { key: "cash",        label: "Депозит / кэш" },
+  { key: "realty",      label: "Недвижимость" },
+  { key: "other",       label: "Прочее" },
+];
+export const ASSET_CLASS_LABEL: Record<string, string> = Object.fromEntries(
+  ASSET_CLASSES.map((c) => [c.key, c.label]),
+);
 
 export interface PortfolioRequest {
   risk: string;
@@ -67,6 +100,7 @@ export interface PortfolioRequest {
   manual_funds?: Record<string, number>;
   manual_index_weights?: Record<string, number>;
   deposit_term_months?: number;
+  external_assets?: ExternalAsset[];
 }
 
 export const RISK_PROFILES: Record<string, { name: string; desc: string; tag: string }> = {

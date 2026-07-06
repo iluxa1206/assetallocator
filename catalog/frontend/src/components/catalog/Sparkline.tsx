@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -36,6 +37,7 @@ export function Sparkline({
   ytdStartIdx,
   benchPoints,
 }: Props) {
+  const uid = useId();
   if (!points || points.length < 2) {
     return (
       <div
@@ -91,64 +93,49 @@ export function Sparkline({
   const areaPath = `${path} L${width},${height} L0,${height} Z`;
   const benchPath = hasBench ? pathOf(coordsOf(benchPoints!)) : null;
 
-  // Base (historical) tone — muted by default when YTD overlay is shown, otherwise full tone.
   const showYtdOverlay =
     typeof ytdStartIdx === "number" && ytdStartIdx > 0 && ytdStartIdx < coords.length;
 
-  const baseStroke = showYtdOverlay
-    ? "rgba(100, 116, 139, 0.7)"
-    : tone === "up"
-      ? "var(--catalog-pos, #058753)"
-      : tone === "down"
-        ? "var(--catalog-neg, #c53030)"
-        : "currentColor";
-  const baseFill = showYtdOverlay
-    ? "rgba(100, 116, 139, 0.08)"
-    : tone === "up"
-      ? "rgba(5, 135, 83, 0.10)"
-      : tone === "down"
-        ? "rgba(197, 48, 48, 0.10)"
-        : "rgba(100, 116, 139, 0.10)";
+  // Institutional tokens — single tone colour, soft gradient fill, no flat blocks.
+  const lineColor = tone === "up" ? "var(--pos)" : tone === "down" ? "var(--neg)" : "var(--muted-foreground)";
+  // When a YTD tail is highlighted, the historical part is muted and the tail carries full tone.
+  const baseStroke = showYtdOverlay ? "var(--muted-foreground)" : lineColor;
 
-  // YTD overlay tone always tracks `tone` (or accent gold if neutral).
-  const ytdStroke =
-    tone === "up" ? "var(--catalog-pos, #058753)" :
-    tone === "down" ? "var(--catalog-neg, #c53030)" :
-    "var(--catalog-accent, #2563eb)";
-  const ytdFill =
-    tone === "up" ? "rgba(5, 135, 83, 0.18)" :
-    tone === "down" ? "rgba(197, 48, 48, 0.18)" :
-    "rgba(37, 99, 235, 0.18)";
-
-  let ytdPath: string | null = null;
-  let ytdAreaPath: string | null = null;
-  if (showYtdOverlay) {
-    const ytdSeg = coords.slice(ytdStartIdx!);
-    ytdPath = pathOf(ytdSeg);
-    const [, startY] = ytdSeg[0];
-    const [endX] = ytdSeg[ytdSeg.length - 1];
-    const startX = ytdSeg[0][0];
-    ytdAreaPath = `${ytdPath} L${endX},${height} L${startX},${height} Z`;
-    void startY;
-  }
+  const gradId = `spark-grad-${uid}`;
+  const ytdClipId = `ytd-clip-${uid}`;
+  const ytdStartX = showYtdOverlay ? coords[ytdStartIdx!][0] : null;
 
   return (
     <svg
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
-      // `none` lets CSS width:100% stretch the path across the container without
-      // the default `xMidYMid meet` letterboxing.
       preserveAspectRatio="none"
       className={cn("overflow-visible", className)}
       aria-hidden
     >
-      <path d={areaPath} fill={baseFill} />
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={lineColor} stopOpacity={0.16} />
+          <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
+        </linearGradient>
+        {showYtdOverlay && ytdStartX !== null && (
+          <clipPath id={ytdClipId}>
+            <rect x={ytdStartX} y={-2} width={width - ytdStartX + 2} height={height + 4} />
+          </clipPath>
+        )}
+      </defs>
+
+      {/* Soft gradient area under the whole line */}
+      <path d={areaPath} fill={`url(#${gradId})`} />
+
+      {/* Benchmark — thin muted dashed */}
       {benchPath && (
         <path
           d={benchPath}
           fill="none"
-          stroke="rgba(100, 116, 139, 0.55)"
+          stroke="var(--muted-foreground)"
+          strokeOpacity={0.45}
           strokeWidth={1}
           strokeDasharray="3 2"
           strokeLinejoin="round"
@@ -156,11 +143,15 @@ export function Sparkline({
           vectorEffect="non-scaling-stroke"
         />
       )}
-      <path d={path} fill="none" stroke={baseStroke} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-      {ytdPath && ytdAreaPath && (
+
+      {/* Base fund line */}
+      <path d={path} fill="none" stroke={baseStroke} strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+
+      {/* YTD tail — same curve, brighter tone, thin divider at the start (no filled block) */}
+      {showYtdOverlay && ytdStartX !== null && (
         <>
-          <path d={ytdAreaPath} fill={ytdFill} />
-          <path d={ytdPath} fill="none" stroke={ytdStroke} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          <line x1={ytdStartX} y1={0} x2={ytdStartX} y2={height} stroke="var(--border)" strokeWidth={1} strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
+          <path d={path} fill="none" stroke={lineColor} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" clipPath={`url(#${ytdClipId})`} />
         </>
       )}
     </svg>

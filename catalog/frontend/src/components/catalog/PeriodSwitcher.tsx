@@ -2,6 +2,7 @@
 
 import type { CatalogRange } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useTabsPill } from "@/hooks/useTabsPill";
 
 /** Order + short button labels for the period switcher. */
 export const RANGE_OPTIONS: { key: CatalogRange; label: string }[] = [
@@ -50,15 +51,19 @@ export function PeriodSwitcher({
   size?: "sm" | "md";
   className?: string;
 }) {
+  const { barRef, pillRef } = useTabsPill(value);
+
   return (
     <div
+      ref={barRef}
       className={cn(
-        "inline-flex rounded-lg border border-border bg-muted/40 p-0.5",
+        "relative inline-flex rounded-lg border border-border bg-muted/40 p-0.5",
         className,
       )}
       role="group"
       aria-label="Период"
     >
+      <span ref={pillRef} className="t-tabs-pill" aria-hidden="true" />
       {RANGE_OPTIONS.map(({ key, label }) => {
         const active = value === key;
         return (
@@ -66,13 +71,11 @@ export function PeriodSwitcher({
             key={key}
             type="button"
             onClick={() => onChange(key)}
-            aria-pressed={active}
+            data-selected={active || undefined}
             className={cn(
-              "rounded-md font-medium tabular-nums transition-colors",
+              "relative z-10 rounded-md font-medium tabular-nums transition-colors",
               size === "sm" ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-1 text-xs",
-              active
-                ? "bg-background text-foreground shadow-sm ring-1 ring-border"
-                : "text-muted-foreground hover:text-foreground",
+              active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
             )}
           >
             {label}

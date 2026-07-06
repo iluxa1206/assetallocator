@@ -6,19 +6,17 @@
 import { TrendingUp, Landmark, Sparkles, Droplets, Briefcase, type LucideIcon } from "lucide-react";
 
 export const CATEGORY_META: Record<string, { label: string; Icon: LucideIcon }> = {
+  alternative: { label: "Хедж-фонды", Icon: Sparkles },
   equities: { label: "Акции", Icon: TrendingUp },
   bonds: { label: "Облигации", Icon: Landmark },
-  alternative: { label: "Альтернативные инвестиции", Icon: Sparkles },
   liquidity: { label: "Ликвидность", Icon: Droplets },
-  advisory: { label: "Advisory", Icon: Briefcase },
 };
 
 export const CATEGORY_ORDER = [
+  "alternative",
   "equities",
   "bonds",
-  "alternative",
   "liquidity",
-  "advisory",
   "other",
 ];
 
@@ -30,6 +28,5 @@ export const FALLBACK_CATEGORY = { label: "Другое", Icon: Briefcase };
  * Exception: «Мгновенная ликвидность» (ДУ, but has a synthetic RUSFAR-based series).
  */
 export function hasChart(fund: { contract_type: string | null; key: string }): boolean {
-  if (fund.key === "Liq") return true;
   return fund.contract_type === "ИПИФ";
 }

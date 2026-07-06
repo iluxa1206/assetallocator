@@ -5,7 +5,7 @@ import { use, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
 import { fetchFund, fetchFundsSeries, fetchMe, type CatalogRange } from "@/lib/api";
-import { Sparkline } from "@/components/catalog/Sparkline";
+import { PerfChart } from "@/components/catalog/PerfChart";
 import { PeriodSwitcher, RANGE_RETURN_LABEL } from "@/components/catalog/PeriodSwitcher";
 import { PerformanceTables } from "@/components/catalog/PerformanceTables";
 import { CATEGORY_META, FALLBACK_CATEGORY, hasChart } from "@/lib/catalog-meta";
@@ -13,10 +13,10 @@ import { fmtAum, fmtPct, fmtPctSimple } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const SEVERITY_TONE: Record<string, string> = {
-  "Высокий": "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300",
-  "Средний": "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300",
-  "Низкий": "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300",
-  "Минимальный": "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300",
+  "Высокий": "bg-[var(--neg)]/12 text-[var(--neg)]",
+  "Средний": "bg-muted text-muted-foreground",
+  "Низкий": "bg-[var(--pos)]/12 text-[var(--pos)]",
+  "Минимальный": "bg-[var(--pos)]/12 text-[var(--pos)]",
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -52,15 +52,15 @@ function KpiCard({
   tone?: "pos" | "neg" | "neutral";
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card px-4 py-3">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+    <div className="glossy rounded-xl px-4 py-3.5">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         {label}
       </div>
       <div
         className={cn(
-          "mt-1 text-2xl font-bold tabular-nums tracking-tight leading-none",
-          tone === "pos" && "text-emerald-700 dark:text-emerald-400",
-          tone === "neg" && "text-rose-600 dark:text-rose-400",
+          "mt-1.5 text-2xl font-extrabold tabular-nums tracking-tight leading-none",
+          tone === "pos" && "text-[var(--pos)]",
+          tone === "neg" && "text-[var(--neg)]",
         )}
       >
         {value}
@@ -108,7 +108,24 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
   });
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
 
-  if (isLoading) return <div className="text-muted-foreground text-sm">Загрузка…</div>;
+  if (isLoading) return (
+    <div className="space-y-8 animate-pulse">
+      <div className="flex items-start gap-4">
+        <div className="rounded-xl bg-muted h-10 w-10 shrink-0" />
+        <div className="space-y-2 flex-1">
+          <div className="h-7 w-64 bg-muted rounded-lg" />
+          <div className="h-4 w-40 bg-muted rounded" />
+        </div>
+      </div>
+      <div className="rounded-2xl border border-border bg-card h-52" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        {[0,1,2,3].map((i) => (
+          <div key={i} className="rounded-xl border border-border bg-card h-16" />
+        ))}
+      </div>
+      <div className="rounded-xl border border-border bg-card h-64" />
+    </div>
+  );
   if (isError || !fund) return <div className="text-destructive text-sm">Не удалось загрузить фонд</div>;
 
   const s = series?.[key];
@@ -126,14 +143,14 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <Link
-            href="/catalog/funds"
+            href="/catalog"
             className="inline-flex items-center gap-1 text-[11px] uppercase tracking-[0.14em] text-muted-foreground hover:text-foreground transition-colors"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
-            Каталог фондов
+            Каталог
           </Link>
           <div className="mt-2 flex items-center gap-3">
-            <div className="rounded-xl bg-blue-100 dark:bg-blue-950/40 p-2.5 text-blue-700 dark:text-blue-400">
+            <div className="rounded-md p-2.5 bg-muted text-foreground/70 ring-1 ring-border">
               <Icon className="h-5 w-5" strokeWidth={2} />
             </div>
             <div className="min-w-0">
@@ -155,60 +172,71 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
         )}
       </div>
 
-      {/* KPI strip — only when fund has a NAV series (ИПИФ + ликвидность). */}
+      {/* Performance hero — only when fund has a NAV series (ИПИФ + ликвидность). */}
       {showChart && (
-      <div className="rounded-2xl border border-border bg-card p-5">
-        <div className="flex items-end justify-between gap-6 flex-wrap">
-          <div>
-            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+      <div className="glossy rounded-2xl p-5 md:p-6">
+        {/* Top: big return + period switcher */}
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="min-w-0">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               {RANGE_RETURN_LABEL[range]}
             </div>
-            <div
-              className={cn(
-                "mt-2 text-5xl font-bold tabular-nums tracking-tight leading-none",
-                ret === null && "text-muted-foreground/40",
-                ret !== null && ret >= 0 && "text-emerald-700 dark:text-emerald-400",
-                ret !== null && ret < 0 && "text-rose-600 dark:text-rose-400",
-              )}
-            >
-              {fmtPct(ret)}
-            </div>
-            {delta !== null && s?.bench_label && (
-              <div className="mt-2 text-xs tabular-nums">
-                <span
-                  className={
-                    delta >= 0
-                      ? "text-emerald-600 dark:text-emerald-400 font-medium"
-                      : "text-rose-600 dark:text-rose-400 font-medium"
-                  }
-                >
-                  {fmtPct(delta, 1)}
-                </span>{" "}
-                <span className="text-muted-foreground">
-                  vs {s.bench_label} ({fmtPct(benchRet, 1)})
-                </span>
+            <div className="mt-2 flex items-end gap-3 flex-wrap">
+              <div
+                className={cn(
+                  "text-[3.25rem] md:text-[4rem] font-extrabold tabular-nums tracking-tight leading-none",
+                  ret === null && "text-muted-foreground/40",
+                  ret !== null && ret >= 0 && "text-[var(--pos)]",
+                  ret !== null && ret < 0 && "text-[var(--neg)]",
+                )}
+              >
+                {fmtPct(ret)}
               </div>
-            )}
-          </div>
-          <div className="shrink-0">
-            <div className="mb-2 flex justify-end">
-              <PeriodSwitcher value={range} onChange={setRange} size="sm" />
-            </div>
-            <Sparkline points={s?.points ?? []} benchPoints={s?.bench_points ?? null} ytdStartIdx={s?.ytd_start_idx ?? null} width={260} height={68} tone={tone} />
-            <div className="mt-1 flex items-center justify-between gap-3 text-[10px] text-muted-foreground tabular-nums">
-              <span>{s?.since ?? ""}</span>
-              {s?.bench_label && (
-                <span className="flex items-center gap-1 normal-case">
-                  <span className="inline-block w-3 border-t border-dashed border-slate-400" />
-                  {s.bench_label}
-                </span>
+              {delta !== null && s?.bench_label && (
+                <div className="mb-1.5 flex items-center gap-2 text-xs tabular-nums">
+                  <span className={cn(
+                    "inline-flex items-center font-bold px-2 py-1 rounded-lg",
+                    delta >= 0 ? "bg-[var(--pos)]/12 text-[var(--pos)]" : "bg-[var(--neg)]/12 text-[var(--neg)]",
+                  )}>
+                    {fmtPct(delta, 1)}
+                  </span>
+                  <span className="text-muted-foreground">
+                    vs {s.bench_label} ({fmtPct(benchRet, 1)})
+                  </span>
+                </div>
               )}
-              <span>{s?.as_of ?? ""}</span>
             </div>
           </div>
+          <PeriodSwitcher value={range} onChange={setRange} />
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        {/* Big interactive chart */}
+        <div className="mt-5">
+          <PerfChart
+            dates={s?.dates ?? []}
+            points={s?.points ?? []}
+            benchPoints={s?.bench_points ?? null}
+            benchLabel={s?.bench_label}
+            tone={tone}
+            height={300}
+          />
+        </div>
+        {/* Legend */}
+        <div className="mt-2 flex items-center gap-4 text-[11px] text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-[3px] w-4 rounded-full" style={{ background: tone === "up" ? "var(--pos)" : tone === "down" ? "var(--neg)" : "var(--primary)" }} />
+            Стратегия фонда
+          </span>
+          {s?.bench_label && (
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-[3px] w-4 rounded-full" style={{ backgroundImage: "repeating-linear-gradient(90deg, var(--chart-5) 0 5px, transparent 5px 8px)" }} />
+              {s.bench_label}
+            </span>
+          )}
+        </div>
+
+        {/* KPI cards */}
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
           <KpiCard
             label="CAGR"
             value={fmtPct(s?.cagr ?? null)}
@@ -230,7 +258,7 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
       {/* Body grid */}
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
         <aside className="space-y-4">
-          <div className="rounded-xl border border-border bg-card p-4">
+          <div className="glossy rounded-xl p-4">
             <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-2">
               Ключевые факты
             </div>
@@ -266,7 +294,7 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
           </div>
 
           {fund.risk_score !== null && (
-            <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+            <div className="glossy rounded-xl p-4 space-y-3">
               <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 Риск продукта
               </div>
@@ -293,7 +321,7 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
               <ul className="space-y-2 text-sm">
                 {fund.why_bullets.map((b, i) => (
                   <li key={i} className="flex gap-2.5">
-                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-blue-500/80 shrink-0" />
+                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
                     <span>{b}</span>
                   </li>
                 ))}
@@ -303,7 +331,7 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
 
           {fund.mgmt_fee_tiers && fund.mgmt_fee_tiers.length > 0 && (
             <Section title="Структура расходов">
-              <div className="rounded-xl border border-border overflow-hidden">
+              <div className="glossy rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50 text-[10px] uppercase tracking-[0.1em]">
                     <tr>
@@ -342,7 +370,7 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
             <Section title="Ключевые риски">
               <div className="space-y-2">
                 {fund.risks.map((r, i) => (
-                  <div key={i} className="rounded-xl border border-border bg-card p-3.5 text-sm">
+                  <div key={i} className="glossy rounded-xl p-3.5 text-sm">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="font-semibold">{r.name}</span>
                       <span
@@ -369,7 +397,7 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
                 fund.top_positions_as_of ? ` (на ${fund.top_positions_as_of})` : ""
               }`}
             >
-              <div className="rounded-xl border border-border overflow-hidden">
+              <div className="glossy rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/50 text-[10px] uppercase tracking-[0.1em]">
                     <tr>

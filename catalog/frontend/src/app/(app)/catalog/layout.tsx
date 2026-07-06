@@ -1,39 +1,12 @@
-"use client";
+import type { ReactNode } from "react";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
-
-const TABS = [
-  { href: "/catalog/funds", label: "Фонды" },
-  { href: "/catalog/strategies", label: "Стратегии" },
-];
-
-export default function CatalogLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+export default function CatalogLayout({ children }: { children: ReactNode }) {
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between border-b border-border pb-3">
-        <h1 className="text-2xl font-semibold">Каталог</h1>
-        <nav className="flex gap-1">
-          {TABS.map(({ href, label }) => {
-            const active = pathname.startsWith(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  "px-4 py-2 text-sm rounded-md transition-colors",
-                  active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent",
-                )}
-              >
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
+      <div className="pb-4 border-b border-border">
+        <p className="text-[11px] font-bold uppercase tracking-[0.14em] brand-text mb-1.5 w-fit">Каталог</p>
+        <h1 className="text-[1.7rem] font-extrabold tracking-tight">Фонды и инструменты</h1>
+        <p className="text-sm text-muted-foreground mt-1">10 фондов · акции, облигации, хедж, ликвидность</p>
       </div>
       {children}
     </div>

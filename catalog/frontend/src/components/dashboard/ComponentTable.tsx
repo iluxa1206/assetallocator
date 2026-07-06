@@ -1,10 +1,17 @@
 import type { FundComponent } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { fmtFull, fmtProfit, fmtPct, fmtPctSimple } from "@/lib/format";
+import { fmtFull, fmtProfit, fmtCompact, fmtCompactSigned, fmtPct, fmtPctSimple } from "@/lib/format";
 
 function cls(v: number | null | undefined) {
   if (v == null) return "";
-  return v > 0 ? "text-emerald-500" : v < 0 ? "text-red-400" : "";
+  return v > 0 ? "text-[var(--pos)]" : v < 0 ? "text-[var(--neg)]" : "";
+}
+
+/** Drawdown is ≤ 0: show "−X%" for losses, plain "0,00%" for none (no "+", no colour). */
+function fmtDD(v: number | null | undefined): string {
+  if (v == null) return "—";
+  if (v === 0) return "0,00%";
+  return fmtPct(v);
 }
 
 interface Props {
@@ -26,7 +33,7 @@ export function ComponentTable({ components, dates, baseCurrency, investedBase, 
   const totalProfit = totalEnded - totalInvested;
 
   return (
-    <div className="bg-card border border-border rounded-2xl overflow-hidden">
+    <div className="glossy rounded-2xl overflow-hidden">
       <div className="px-5 py-4 border-b border-border">
         <p className="text-sm font-semibold">Финансовый результат по фондам</p>
         <p className="text-xs text-muted-foreground mt-0.5">
@@ -35,7 +42,7 @@ export function ComponentTable({ components, dates, baseCurrency, investedBase, 
         </p>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm min-w-[760px]">
           <thead>
             <tr className="text-xs text-muted-foreground border-b border-border bg-muted/20">
               <th className="text-left py-3 px-4 font-medium">ФОНД</th>
@@ -60,15 +67,15 @@ export function ComponentTable({ components, dates, baseCurrency, investedBase, 
                     <span className="font-medium">{c.fund_name}</span>
                     <span className="text-xs text-muted-foreground ml-2">{c.fund_key}</span>
                   </td>
-                  <td className="text-right tabular-nums py-3 px-3">{c.weight.toFixed(1)}%</td>
-                  <td className="text-right tabular-nums py-3 px-3 text-muted-foreground">
-                    {fmtFull(c.invested_base, baseCurrency)}
+                  <td className="text-right tabular-nums py-3 px-3">{c.weight.toFixed(1).replace(".", ",")}%</td>
+                  <td className="text-right tabular-nums py-3 px-3 text-muted-foreground" title={fmtFull(c.invested_base, baseCurrency)}>
+                    {fmtCompact(c.invested_base, baseCurrency)}
                   </td>
-                  <td className={cn("text-right tabular-nums py-3 px-3", cls(profit))}>
-                    {fmtFull(c.ended_base, baseCurrency)}
+                  <td className="text-right tabular-nums py-3 px-3 font-medium" title={c.ended_base != null ? fmtFull(c.ended_base, baseCurrency) : undefined}>
+                    {c.ended_base != null ? fmtCompact(c.ended_base, baseCurrency) : "—"}
                   </td>
-                  <td className={cn("text-right tabular-nums py-3 px-3 font-medium", cls(profit))}>
-                    {fmtProfit(profit, baseCurrency)}
+                  <td className={cn("text-right tabular-nums py-3 px-3 font-medium", cls(profit))} title={profit != null ? fmtProfit(profit, baseCurrency) : undefined}>
+                    {fmtCompactSigned(profit, baseCurrency)}
                   </td>
                   <td className={cn("text-right tabular-nums py-3 px-3", cls(c.metrics?.total_ret))}>
                     {fmtPct(c.metrics?.total_ret ?? null)}
@@ -80,10 +87,10 @@ export function ComponentTable({ components, dates, baseCurrency, investedBase, 
                     {fmtPctSimple(c.metrics?.vol ?? null)}
                   </td>
                   <td className={cn("text-right tabular-nums py-3 px-3", cls(c.metrics?.max_dd))}>
-                    {fmtPct(c.metrics?.max_dd ?? null)}
+                    {fmtDD(c.metrics?.max_dd)}
                   </td>
                   <td className={cn("text-right tabular-nums py-3 px-4", cls(contrib))}>
-                    {contrib != null ? (contrib >= 0 ? "+" : "") + contrib.toFixed(1) + "%" : "—"}
+                    {contrib != null ? (contrib >= 0 ? "+" : "−") + Math.abs(contrib).toFixed(1).replace(".", ",") + "%" : "—"}
                   </td>
                 </tr>
               );
@@ -93,10 +100,10 @@ export function ComponentTable({ components, dates, baseCurrency, investedBase, 
           <tfoot>
             <tr className="border-t-2 border-border bg-muted/20 font-semibold text-sm">
               <td className="py-3 px-4">Итого по портфелю</td>
-              <td className="text-right tabular-nums py-3 px-3">100.0%</td>
-              <td className="text-right tabular-nums py-3 px-3 text-muted-foreground">{fmtFull(totalInvested, baseCurrency)}</td>
-              <td className={cn("text-right tabular-nums py-3 px-3", cls(totalProfit))}>{fmtFull(totalEnded, baseCurrency)}</td>
-              <td className={cn("text-right tabular-nums py-3 px-3", cls(totalProfit))}>{fmtProfit(totalProfit, baseCurrency)}</td>
+              <td className="text-right tabular-nums py-3 px-3">100,0%</td>
+              <td className="text-right tabular-nums py-3 px-3 text-muted-foreground" title={fmtFull(totalInvested, baseCurrency)}>{fmtCompact(totalInvested, baseCurrency)}</td>
+              <td className="text-right tabular-nums py-3 px-3" title={fmtFull(totalEnded, baseCurrency)}>{fmtCompact(totalEnded, baseCurrency)}</td>
+              <td className={cn("text-right tabular-nums py-3 px-3", cls(totalProfit))} title={fmtProfit(totalProfit, baseCurrency)}>{fmtCompactSigned(totalProfit, baseCurrency)}</td>
               <td className={cn("text-right tabular-nums py-3 px-3", cls(totalProfit))}>
                 {totalInvested > 0 ? fmtPct(totalProfit / totalInvested) : "—"}
               </td>

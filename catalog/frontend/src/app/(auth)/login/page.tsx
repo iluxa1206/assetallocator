@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Logo } from "@/components/layout/Logo";
 
 
 export default function LoginPage() {
@@ -10,6 +11,22 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const emailRef = useRef<HTMLInputElement>(null);
+  const pwdRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!error) return;
+    const shake = (el: HTMLInputElement | null) => {
+      if (!el) return;
+      el.classList.remove("is-shaking");
+      void el.offsetWidth;
+      el.classList.add("is-shaking");
+      setTimeout(() => el.classList.remove("is-shaking"), 300);
+    };
+    shake(emailRef.current);
+    shake(pwdRef.current);
+  }, [error]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -46,13 +63,20 @@ export default function LoginPage() {
     }
   }
 
+  const clearError = () => { if (error) setError(""); };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-full max-w-sm bg-card rounded-2xl shadow-lg p-8 border border-border">
-        <p className="text-xs font-semibold text-primary uppercase tracking-widest text-center mb-1">
-          Astra AM
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="glossy w-full max-w-sm rounded-xl p-8 backdrop-blur-xl">
+        <div className="flex justify-center mb-6">
+          <Logo />
+        </div>
+        <h1 className="text-[1.6rem] font-extrabold tracking-tight text-center text-card-foreground">
+          С возвращением
+        </h1>
+        <p className="text-sm text-muted-foreground text-center mt-1 mb-7">
+          Войдите, чтобы собирать модельные портфели
         </p>
-        <h1 className="text-xl font-semibold text-center text-card-foreground mb-6">Вход</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
@@ -60,14 +84,15 @@ export default function LoginPage() {
               Email
             </label>
             <input
+              ref={emailRef}
               id="email"
               type="email"
               autoComplete="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
-              placeholder="admin@astra.local"
+              onChange={(e) => { setEmail(e.target.value); clearError(); }}
+              className={`t-input w-full px-3 py-2 text-sm border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary${error ? " border-destructive is-error" : " border-input"}`}
+              placeholder="you@company.com"
             />
           </div>
 
@@ -76,13 +101,14 @@ export default function LoginPage() {
               Пароль
             </label>
             <input
+              ref={pwdRef}
               id="password"
               type="password"
               autoComplete="current-password"
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+              onChange={(e) => { setPassword(e.target.value); clearError(); }}
+              className={`t-input w-full px-3 py-2 text-sm border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary${error ? " border-destructive is-error" : " border-input"}`}
             />
           </div>
 
@@ -93,9 +119,17 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 px-4 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-2.5 px-4 text-sm font-semibold text-primary-foreground bg-primary rounded-lg disabled:opacity-60 disabled:cursor-not-allowed transition-all hover:bg-primary/90 active:scale-[0.99]"
           >
-            {loading ? "Вход…" : "Войти"}
+            <span className="inline-flex items-center justify-center gap-2">
+              {loading && (
+                <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+              )}
+              {loading ? "Вход…" : "Войти"}
+            </span>
           </button>
         </form>
       </div>

@@ -25,12 +25,30 @@ function PctCell({ v }: { v: number | null | undefined }) {
     <span
       className={cn(
         "tabular-nums",
-        v > 0 && "text-emerald-700 dark:text-emerald-400",
-        v < 0 && "text-rose-600 dark:text-rose-400",
+        v > 0 && "text-[var(--pos)]",
+        v < 0 && "text-[var(--neg)]",
       )}
     >
       {fmtPct(v, 2)}
     </span>
+  );
+}
+
+/** Heatmap cell: background tint scaled by magnitude relative to the period's max move. */
+function HeatCell({ v, maxAbs, bold }: { v: number | null | undefined; maxAbs: number; bold?: boolean }) {
+  if (v == null) {
+    return <td className="px-2 py-1.5 text-right text-muted-foreground/30">—</td>;
+  }
+  const intensity = maxAbs > 0 ? Math.min(1, Math.abs(v) / maxAbs) : 0;
+  const pct = Math.round((0.06 + intensity * 0.40) * 100);
+  const token = v >= 0 ? "var(--pos)" : "var(--neg)";
+  return (
+    <td
+      className={cn("px-2 py-1.5 text-right tabular-nums", bold ? "font-bold border-l border-border" : "font-medium")}
+      style={{ background: `color-mix(in oklab, ${token} ${pct}%, transparent)` }}
+    >
+      {fmtPct(v, 1)}
+    </td>
   );
 }
 
@@ -57,6 +75,11 @@ export function PerformanceTables({ fundKey }: { fundKey: string }) {
     byYear.get(y)!.set(mo, m.ret);
   }
   const years = [...byYear.keys()].sort();
+  // Heatmap scale — largest absolute monthly move across the whole grid.
+  const maxAbsMonthly = Math.max(
+    0,
+    ...data.monthly.map((m) => (m.ret != null ? Math.abs(m.ret) : 0)),
+  );
   const annualByYear = new Map<number, number | null>();
   for (const y of years) {
     const months = byYear.get(y)!;
@@ -134,17 +157,10 @@ export function PerformanceTables({ fundKey }: { fundKey: string }) {
                 {years.map((y) => (
                   <tr key={y} className="border-t border-border">
                     <td className="px-2 py-1.5 font-semibold sticky left-0 bg-card">{y}</td>
-                    {MONTH_LABELS.map((_, i) => {
-                      const r = byYear.get(y)?.get(i + 1);
-                      return (
-                        <td key={i} className="px-2 py-1.5 text-right">
-                          <PctCell v={r ?? null} />
-                        </td>
-                      );
-                    })}
-                    <td className="px-2 py-1.5 text-right font-bold border-l border-border">
-                      <PctCell v={annualByYear.get(y) ?? null} />
-                    </td>
+                    {MONTH_LABELS.map((_, i) => (
+                      <HeatCell key={i} v={byYear.get(y)?.get(i + 1) ?? null} maxAbs={maxAbsMonthly} />
+                    ))}
+                    <HeatCell v={annualByYear.get(y) ?? null} maxAbs={maxAbsMonthly} bold />
                   </tr>
                 ))}
               </tbody>

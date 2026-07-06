@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 function totalCls(total: number) {
   const ok = Math.abs(total - 100) < 0.05;
   return ok
-    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-    : "bg-rose-500/10 text-rose-600 dark:text-rose-400";
+    ? "bg-[var(--pos)]/12 text-[var(--pos)]"
+    : "bg-[var(--neg)]/12 text-[var(--neg)]";
 }
 
 function fmtPct(v: number): string {
@@ -53,26 +53,18 @@ export function ManualPanel() {
   );
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <p className="text-sm text-muted-foreground max-w-3xl">
-          Задайте доли фондов вручную. Доли композитного индекса пересобираются автоматически из бенчмарков фондов.
-          Ручной режим переопределяет выбранную стратегию — кнопки риск-профиля и валютной стратегии станут неактивны.
-        </p>
-        <button type="button"
-          onClick={() => s.set({ manual: false })}
-          className="px-3 py-1.5 text-sm border border-border rounded-lg hover:bg-muted transition-colors whitespace-nowrap"
-        >
-          Вернуться к стратегии
-        </button>
-      </div>
+    <div className="glossy rounded-2xl p-5 space-y-4">
+      <p className="text-sm text-muted-foreground max-w-3xl">
+        Задайте доли фондов вручную. Доли композитного индекса пересобираются автоматически из бенчмарков фондов.
+        Ручной режим переопределяет выбранную стратегию — кнопки риск-профиля и валютной стратегии станут неактивны.
+      </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Funds column */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-semibold flex items-center gap-2">
-              Фонды Astra AM
+              Фонды
               <span className={cn("text-xs font-semibold tabular-nums px-2 py-0.5 rounded", totalCls(fundsTotal))}>
                 {fmtPct(fundsTotal)}
               </span>

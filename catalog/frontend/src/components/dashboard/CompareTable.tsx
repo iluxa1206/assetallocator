@@ -2,13 +2,14 @@ import type { Metrics } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { fmtCompact, fmtPct, fmtPctSimple } from "@/lib/format";
 
-function Cell({ value, positive, muted }: { value: string; positive?: boolean; muted?: boolean }) {
+function Cell({ value, positive, muted, highlight }: { value: string; positive?: boolean; muted?: boolean; highlight?: boolean }) {
   return (
     <td className={cn(
       "text-right tabular-nums py-3 px-4",
+      highlight && "bg-primary/[0.04]",
       muted ? "text-muted-foreground" : "",
-      !muted && positive === true ? "text-emerald-500 font-medium" :
-      !muted && positive === false ? "text-red-400 font-medium" : "",
+      !muted && positive === true ? "text-[var(--pos)] font-semibold" :
+      !muted && positive === false ? "text-[var(--neg)] font-semibold" : "font-medium",
     )}>
       {value}
     </td>
@@ -45,11 +46,12 @@ export function CompareTable({ portfolio, benchmark, cpi, deposit, depositTerm =
   const cpiProfit = investedBase != null && cpiEndedBase != null ? cpiEndedBase - investedBase : null;
   const depProfit = investedBase != null && depEndedBase != null ? depEndedBase - investedBase : null;
 
+  // Colours synced 1:1 with MainChart line palette.
   const cols: ColHeader[] = [
-    { label: `Портфель «${portfolioName}»`, color: "#2563eb", name: "port" },
-    { label: "Композитный индекс", color: "#5b8fcc", name: "bench" },
-    { label: `Депозит ${depositTerm} мес`, color: "#10b981", name: "dep" },
-    { label: `Инфляция (${baseCurrency})`, color: "#9e9e9e", name: "cpi" },
+    { label: `Портфель «${portfolioName}»`, color: "var(--primary)", name: "port" },
+    { label: "Композитный индекс", color: "var(--chart-5)", name: "bench" },
+    { label: `Депозит ${depositTerm} мес`, color: "var(--pos)", name: "dep" },
+    { label: `Инфляция (${baseCurrency})`, color: "var(--muted-foreground)", name: "cpi" },
   ];
 
   type Row = {
@@ -73,10 +75,6 @@ export function CompareTable({ portfolio, benchmark, cpi, deposit, depositTerm =
       bench: benchEndedBase != null ? fmtCompact(benchEndedBase, baseCurrency) : "—",
       dep: depEndedBase != null ? fmtCompact(depEndedBase, baseCurrency) : "—",
       cpi_: cpiEndedBase != null ? fmtCompact(cpiEndedBase, baseCurrency) : "—",
-      posPort: endedBase != null && investedBase != null ? endedBase >= investedBase : undefined,
-      posBench: benchEndedBase != null && investedBase != null ? benchEndedBase >= investedBase : undefined,
-      posDep: depEndedBase != null && investedBase != null ? depEndedBase >= investedBase : undefined,
-      posCpi: cpiEndedBase != null && investedBase != null ? cpiEndedBase >= investedBase : undefined,
     },
     {
       label: "Финансовый результат",
@@ -143,13 +141,14 @@ export function CompareTable({ portfolio, benchmark, cpi, deposit, depositTerm =
   ];
 
   return (
-    <div className="bg-card border border-border rounded-2xl overflow-hidden">
-      <table className="w-full text-sm">
+    <div className="glossy rounded-2xl overflow-hidden">
+      <div className="overflow-x-auto">
+      <table className="w-full text-sm min-w-[640px]">
         <thead>
           <tr className="border-b border-border bg-muted/30">
             <th className="text-left py-3 px-4 font-medium text-sm">Параметр</th>
-            {cols.map((c) => (
-              <th key={c.name} className="text-right py-3 px-4 font-medium">
+            {cols.map((c, ci) => (
+              <th key={c.name} className={cn("text-right py-3 px-4 font-medium", ci === 0 && "bg-primary/[0.04]")}>
                 <div className="flex items-center justify-end gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-sm" style={{ background: c.color }} />
                   <span className="text-xs uppercase tracking-wide" style={{ color: c.color }}>{c.label}</span>
@@ -163,12 +162,13 @@ export function CompareTable({ portfolio, benchmark, cpi, deposit, depositTerm =
             <tr key={r.label} className="border-b border-border/50 last:border-0 hover:bg-muted/20 transition-colors">
               <td className="py-3 px-4 text-sm text-muted-foreground">{r.label}</td>
               {vals(r).map((cell, i) => (
-                <Cell key={i} value={cell.v} positive={cell.pos} muted={cell.mute} />
+                <Cell key={i} value={cell.v} positive={cell.pos} muted={cell.mute} highlight={i === 0} />
               ))}
             </tr>
           ))}
         </tbody>
       </table>
+      </div>
       <div className="px-4 py-3 border-t border-border/50 text-[11px] text-muted-foreground/70">
         Все ряды нормированы к 100 на стартовую дату. Композитный индекс собран из бенчмарков фондов пропорционально их долям. Депозит — реинвестирование с капитализацией каждые {depositTerm} мес по максимальной ставке топ-10 банков (ЦБ РФ). Инфляция — накопленный индекс CPI выбранной базовой валюты.
       </div>
