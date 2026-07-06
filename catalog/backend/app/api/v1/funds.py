@@ -34,11 +34,15 @@ def _downsample_indices(n: int, target: int = 40) -> list[int]:
 
     Returned once so several parallel arrays (fund line + benchmark line) sample at the
     exact same positions and stay aligned on the chart.
+
+    Spans [0, n-1] inclusive so the FIRST and LAST points are always kept — the last
+    point carries the current NAV, and dropping it froze the chart a month behind the
+    KPI value. Dedupe guards against float rounding collisions near the ends.
     """
     if n <= target:
         return list(range(n))
-    step = n / target
-    return [int(i * step) for i in range(target)]
+    step = (n - 1) / (target - 1)
+    return sorted({round(i * step) for i in range(target)})
 
 
 # Cutoff windows for the range switcher. "ytd" / "max" are handled separately.
@@ -112,7 +116,7 @@ async def funds_series(
 
     result: dict[str, dict[str, Any]] = {}
     empty = {
-        "points": [], "bench_points": None, "ret": None, "bench_ret": None,
+        "points": [], "bench_points": None, "dates": [], "ret": None, "bench_ret": None,
         "since": None, "currency": "RUB", "ytd_start_idx": None,
         "sharpe": None, "beta": None,
     }
@@ -193,6 +197,7 @@ async def funds_series(
         result[fund.key] = {
             "points": [normed[i][1] for i in idxs],
             "bench_points": [bench_norm[i] for i in idxs] if bench_norm is not None else None,
+            "dates": [d.isoformat() for d in ds_dates],
             "ret": ret,
             "bench_ret": bench_ret,
             "bench_label": fund.benchmark_label or fund.benchmark,

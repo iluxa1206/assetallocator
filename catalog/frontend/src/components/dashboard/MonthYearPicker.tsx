@@ -12,12 +12,9 @@ interface Props {
 }
 
 export function MonthYearPicker({ value, onChange, availableDates }: Props) {
-  // Normalize: extract YYYY-MM prefix for all lookups
-  const toYM = (d: string) => d.slice(0, 7); // "YYYY-MM-DD" → "YYYY-MM"
+  const toYM = (d: string) => d.slice(0, 7);
 
-  // Map "YYYY-MM" → original full date string (for onChange)
   const ymToFull = new Map(availableDates.map((d) => [toYM(d), d]));
-  // Set of available "YYYY-MM" keys
   const availableYM = new Set(availableDates.map(toYM));
   const years = [...new Set(availableDates.map((d) => parseInt(d.slice(0, 4))))].sort((a,b) => a-b);
 
@@ -26,20 +23,46 @@ export function MonthYearPicker({ value, onChange, availableDates }: Props) {
   const year  = parseInt(y) || new Date().getFullYear();
   const month = parseInt(m) || 1;
 
-  const [open, setOpen] = useState(false);
+  const [open,    setOpen]    = useState(false);
+  const [closing, setClosing] = useState(false);
   const [viewYear, setViewYear] = useState(year);
-  const ref = useRef<HTMLDivElement>(null);
+  const [origin,  setOrigin]  = useState<"top-left" | "top-right">("top-left");
+
+  const ref        = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const closeDropdown = () => {
+    setClosing(true);
+    closeTimerRef.current = setTimeout(() => {
+      setClosing(false);
+      setOpen(false);
+    }, 150);
+  };
+
+  useEffect(() => {
+    return () => { if (closeTimerRef.current) clearTimeout(closeTimerRef.current); };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) closeDropdown();
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const label = currentYM ? `${MONTHS[month - 1]} ${year}` : "—";
+
+  const handleOpen = () => {
+    if (!open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setOrigin(rect.left + 224 > window.innerWidth ? "top-right" : "top-left");
+    }
+    setOpen((o) => !o);
+    setViewYear(year);
+  };
 
   const prevYear = () => {
     const idx = years.indexOf(viewYear);
@@ -53,9 +76,8 @@ export function MonthYearPicker({ value, onChange, availableDates }: Props) {
   const selectMonth = (m: number) => {
     const ym = `${viewYear}-${String(m).padStart(2, "0")}`;
     if (!availableYM.has(ym)) return;
-    // Emit full original date string (preserving whatever format API uses)
     onChange(ymToFull.get(ym) ?? ym);
-    setOpen(false);
+    closeDropdown();
   };
 
   const isFirst = years.indexOf(viewYear) === 0;
@@ -65,7 +87,8 @@ export function MonthYearPicker({ value, onChange, availableDates }: Props) {
     <div className="relative" ref={ref}>
       {/* Trigger */}
       <button type="button"
-        onClick={() => { setOpen((o) => !o); setViewYear(year); }}
+        ref={triggerRef}
+        onClick={handleOpen}
         className={cn(
           "px-3 py-1.5 text-sm font-medium border border-input rounded-lg bg-background",
           "hover:bg-muted transition-colors focus:outline-none focus:ring-1 focus:ring-primary",
@@ -77,13 +100,14 @@ export function MonthYearPicker({ value, onChange, availableDates }: Props) {
       </button>
 
       {/* Popover */}
-      {open && (
+      {(open || closing) && (
         <div className={cn(
-          "absolute top-full mt-2 z-50 w-56",
-          "bg-popover border border-border rounded-xl shadow-xl",
-          "overflow-hidden animate-in fade-in-0 zoom-in-95 duration-150",
-          // open left if near right edge — default open left-aligned
-        )}>
+          "t-dropdown absolute top-full mt-2 z-50 w-56",
+          "bg-popover border border-border rounded-xl shadow-xl overflow-hidden",
+          origin === "top-right" && "right-0",
+          open && !closing && "is-open",
+          closing && "is-closing",
+        )} data-origin={origin}>
           {/* Year selector */}
           <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
             <button type="button"
