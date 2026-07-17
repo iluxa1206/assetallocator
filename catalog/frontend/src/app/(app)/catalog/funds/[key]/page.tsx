@@ -83,11 +83,13 @@ function KpiCard({
   );
 }
 
+/** "1,5%" / "—" — fee percent, ru decimal comma. */
 const fmtFeePct = (v: number | null) => (v != null ? `${String(v).replace(".", ",")}%` : "—");
 
 /** Fee schedule. Collapses to a one-line summary when all tiers charge the same;
- *  shows the tier table only when fees actually vary by AUM. Empty columns are hidden. */
-function FeeStructure({ tiers, ccy }: { tiers: MgmtFeeTier[]; ccy: string }) {
+ *  shows the tier table only when fees actually vary by AUM. Empty columns are hidden.
+ *  `bare` drops the glossy card wrapper for embedding inside another card (e.g. the sidebar). */
+function FeeStructure({ tiers, ccy, bare = false }: { tiers: MgmtFeeTier[]; ccy: string; bare?: boolean }) {
   const sym = CCY_SYM[ccy] ?? ccy;
   const first = tiers[0];
   const uniform = tiers.every(
@@ -98,7 +100,7 @@ function FeeStructure({ tiers, ccy }: { tiers: MgmtFeeTier[]; ccy: string }) {
 
   if (uniform) {
     return (
-      <div className="glossy rounded-xl px-4 py-3.5 flex flex-wrap gap-x-8 gap-y-2 text-sm">
+      <div className={cn("flex flex-wrap gap-x-6 gap-y-2 text-sm", !bare && "glossy rounded-xl px-4 py-3.5")}>
         <div>
           <span className="text-muted-foreground">Management fee&nbsp;</span>
           <span className="font-semibold tabular-nums">{fmtFeePct(first.mf)}</span>
@@ -120,23 +122,23 @@ function FeeStructure({ tiers, ccy }: { tiers: MgmtFeeTier[]; ccy: string }) {
   }
 
   return (
-    <div className="glossy rounded-xl overflow-x-auto">
-      <table className="w-full min-w-[420px] text-sm">
+    <div className={cn("overflow-x-auto", bare ? "rounded-lg border border-border" : "glossy rounded-xl")}>
+      <table className="w-full text-sm">
         <thead className="bg-muted/50 text-[10px] uppercase tracking-[0.1em]">
           <tr>
-            <th className="px-3 py-2.5 text-left">Тир, {sym}</th>
-            <th className="px-3 py-2.5 text-right">MF, %</th>
-            {hasSf && <th className="px-3 py-2.5 text-right">SF, %</th>}
-            {hasHurdle && <th className="px-3 py-2.5 text-left">Над бенчмарком</th>}
+            <th className="px-2.5 py-2 text-left">Тир, {sym}</th>
+            <th className="px-2.5 py-2 text-right">MF, %</th>
+            {hasSf && <th className="px-2.5 py-2 text-right">SF, %</th>}
+            {hasHurdle && <th className="px-2.5 py-2 text-left">Над бенчмарком</th>}
           </tr>
         </thead>
         <tbody className="tabular-nums">
           {tiers.map((t, i) => (
             <tr key={i} className="border-t border-border">
-              <td className="px-3 py-2">{t.tier}</td>
-              <td className="px-3 py-2 text-right">{t.mf ?? "—"}</td>
-              {hasSf && <td className="px-3 py-2 text-right">{t.sf ?? "—"}</td>}
-              {hasHurdle && <td className="px-3 py-2 text-muted-foreground">{t.hurdle ?? "—"}</td>}
+              <td className="px-2.5 py-1.5">{t.tier}</td>
+              <td className="px-2.5 py-1.5 text-right">{t.mf ?? "—"}</td>
+              {hasSf && <td className="px-2.5 py-1.5 text-right">{t.sf ?? "—"}</td>}
+              {hasHurdle && <td className="px-2.5 py-1.5 text-muted-foreground">{t.hurdle ?? "—"}</td>}
             </tr>
           ))}
         </tbody>
@@ -408,6 +410,30 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
             </div>
           )}
 
+          {fund.mgmt_fee_tiers && fund.mgmt_fee_tiers.length > 0 && (
+            <div className="glossy rounded-xl p-4 space-y-3">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Структура расходов
+              </div>
+              <FeeStructure tiers={fund.mgmt_fee_tiers} ccy={fund.native_currency} bare />
+              {(fund.redemption_discount_y1 !== null ||
+                fund.redemption_discount_y2 !== null ||
+                fund.extra_expenses ||
+                fund.hwm) && (
+                <div className="text-[11px] text-muted-foreground space-y-0.5">
+                  {(fund.redemption_discount_y1 !== null || fund.redemption_discount_y2 !== null) && (
+                    <div>
+                      Скидки при погашении: 1-й год {fund.redemption_discount_y1 ?? 0}%, 2-й год{" "}
+                      {fund.redemption_discount_y2 ?? 0}%, далее 0%
+                    </div>
+                  )}
+                  {fund.extra_expenses && <div>{fund.extra_expenses}</div>}
+                  {fund.hwm && <div>High-Water Mark: применяется</div>}
+                </div>
+              )}
+            </div>
+          )}
+
           {fund.documents && fund.documents.length > 0 && (
             <div className="glossy rounded-xl p-4 space-y-2">
               <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-1">
@@ -453,22 +479,6 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
                   </li>
                 ))}
               </ul>
-            </Section>
-          )}
-
-          {fund.mgmt_fee_tiers && fund.mgmt_fee_tiers.length > 0 && (
-            <Section title="Структура расходов">
-              <FeeStructure tiers={fund.mgmt_fee_tiers} ccy={fund.native_currency} />
-              <div className="text-[11px] text-muted-foreground space-y-0.5 mt-2.5">
-                {(fund.redemption_discount_y1 !== null || fund.redemption_discount_y2 !== null) && (
-                  <div>
-                    Скидки при погашении: 1-й год {fund.redemption_discount_y1 ?? 0}%, 2-й год{" "}
-                    {fund.redemption_discount_y2 ?? 0}%, далее 0%
-                  </div>
-                )}
-                {fund.extra_expenses && <div>{fund.extra_expenses}</div>}
-                {fund.hwm && <div>High-Water Mark: применяется</div>}
-              </div>
             </Section>
           )}
 
