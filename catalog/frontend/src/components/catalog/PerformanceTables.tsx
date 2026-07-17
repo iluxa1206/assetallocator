@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { fetchPerformance } from "@/lib/api";
-import { fmtPct } from "@/lib/format";
+import { fmtDate, fmtPct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const PERIOD_LABELS: Record<string, string> = {
@@ -101,10 +101,10 @@ export function PerformanceTables({ fundKey }: { fundKey: string }) {
       {availablePeriods.length > 0 && (
         <section className="space-y-2">
           <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Результаты инвестирования{data.currency ? ` (в ${data.currency})` : ""} · на {data.as_of}
+            Результаты инвестирования{data.currency ? ` (в ${data.currency})` : ""} · на {fmtDate(data.as_of)}
           </h3>
-          <div className="rounded-xl border border-border overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="rounded-xl border border-border overflow-x-auto">
+            <table className="w-full min-w-[560px] text-sm">
               <thead className="bg-muted/50 text-[10px] uppercase tracking-[0.1em]">
                 <tr>
                   <th className="px-3 py-2 text-left">Доходность</th>
@@ -143,7 +143,7 @@ export function PerformanceTables({ fundKey }: { fundKey: string }) {
             Изменение стоимости пая по месяцам{data.currency ? ` (в ${data.currency})` : ""}
           </h3>
           <div className="rounded-xl border border-border overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full min-w-[720px] text-xs">
               <thead className="bg-muted/50 text-[10px] uppercase tracking-[0.1em]">
                 <tr>
                   <th className="px-2 py-2 text-left sticky left-0 bg-muted/50 z-10">Год</th>

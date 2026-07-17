@@ -77,3 +77,10 @@ export function fmtYears(n: number, digits = 1): string {
   const r = +n.toFixed(digits);
   return r.toFixed(digits).replace(".", ",") + " " + yearWord(r);
 }
+
+/** "12.03.2025" — ISO date (YYYY-MM-DD) → ru dd.mm.yyyy; passthrough if not ISO */
+export function fmtDate(s: string | null | undefined): string {
+  if (!s) return "—";
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : s;
+}
