@@ -362,6 +362,9 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
       </div>
       )}
 
+      {/* Performance tables — returns + monthly, full width, right after the chart and above the narrative */}
+      {showChart && <PerformanceTables fundKey={fund.key} />}
+
       {/* Body grid */}
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
         <aside className="space-y-4">
@@ -495,42 +498,36 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
         </div>
       </div>
 
-      {/* Wide data tables — full width so 8-/13-column tables aren't clipped inside the 1fr column */}
-      {(showChart || (fund.top_positions && fund.top_positions.length > 0)) && (
-        <div className="space-y-8">
-          {showChart && <PerformanceTables fundKey={fund.key} />}
-
-          {fund.top_positions && fund.top_positions.length > 0 && (
-            <Section
-              title={`Ключевые позиции${
-                fund.top_positions_as_of ? ` (на ${fmtDate(fund.top_positions_as_of)})` : ""
-              }`}
-            >
-              <div className="glossy rounded-xl overflow-x-auto">
-                <table className="w-full min-w-[560px] text-sm">
-                  <thead className="bg-muted/50 text-[10px] uppercase tracking-[0.1em]">
-                    <tr>
-                      <th className="px-3 py-2.5 text-left">Инструмент</th>
-                      <th className="px-3 py-2.5 text-left">Эмитент / Выпуск</th>
-                      <th className="px-3 py-2.5 text-right">Доля / Купон</th>
-                      <th className="px-3 py-2.5 text-left">Погашение</th>
-                    </tr>
-                  </thead>
-                  <tbody className="tabular-nums">
-                    {fund.top_positions.map((p, i) => (
-                      <tr key={i} className="border-t border-border">
-                        <td className="px-3 py-2">{p.instrument ?? "—"}</td>
-                        <td className="px-3 py-2 font-medium">{p.issuer ?? p.issue ?? "—"}</td>
-                        <td className="px-3 py-2 text-right">{p.weight ?? p.coupon ?? "—"}</td>
-                        <td className="px-3 py-2 text-muted-foreground">{p.maturity ?? "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Section>
-          )}
-        </div>
+      {/* Key positions — full width so the holdings table isn't clipped inside the 1fr column */}
+      {fund.top_positions && fund.top_positions.length > 0 && (
+        <Section
+          title={`Ключевые позиции${
+            fund.top_positions_as_of ? ` (на ${fmtDate(fund.top_positions_as_of)})` : ""
+          }`}
+        >
+          <div className="glossy rounded-xl overflow-x-auto">
+            <table className="w-full min-w-[560px] text-sm">
+              <thead className="bg-muted/50 text-[10px] uppercase tracking-[0.1em]">
+                <tr>
+                  <th className="px-3 py-2.5 text-left">Инструмент</th>
+                  <th className="px-3 py-2.5 text-left">Эмитент / Выпуск</th>
+                  <th className="px-3 py-2.5 text-right">Доля / Купон</th>
+                  <th className="px-3 py-2.5 text-left">Погашение</th>
+                </tr>
+              </thead>
+              <tbody className="tabular-nums">
+                {fund.top_positions.map((p, i) => (
+                  <tr key={i} className="border-t border-border">
+                    <td className="px-3 py-2">{p.instrument ?? "—"}</td>
+                    <td className="px-3 py-2 font-medium">{p.issuer ?? p.issue ?? "—"}</td>
+                    <td className="px-3 py-2 text-right">{p.weight ?? p.coupon ?? "—"}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{p.maturity ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Section>
       )}
     </div>
   );
