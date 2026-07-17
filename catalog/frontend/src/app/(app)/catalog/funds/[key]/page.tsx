@@ -215,7 +215,7 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
   return (
     <div className="space-y-8">
       {/* Hero header — sticks to top on desktop scroll (mobile keeps the fixed app bar) */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between md:sticky md:top-0 md:z-20 md:-mx-6 md:px-6 md:py-3 md:bg-background/85 md:backdrop-blur-sm md:border-b md:border-border/60">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between md:sticky md:-top-8 md:z-20 md:-mx-6 md:px-6 md:py-3 md:bg-background md:border-b md:border-border/60">
         <div className="min-w-0">
           <Link
             href="/catalog"
