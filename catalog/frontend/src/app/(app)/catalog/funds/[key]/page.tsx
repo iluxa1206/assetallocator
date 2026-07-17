@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { use, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Download, FileText } from "lucide-react";
 import { fetchFund, fetchFundsSeries, fetchMe, type CatalogRange } from "@/lib/api";
 import { PerfChart } from "@/components/catalog/PerfChart";
+import { PresentationBlock } from "@/components/catalog/PresentationBlock";
 import { PeriodSwitcher, RANGE_RETURN_LABEL } from "@/components/catalog/PeriodSwitcher";
 import { PerformanceTables } from "@/components/catalog/PerformanceTables";
 import { CATEGORY_META, FALLBACK_CATEGORY, hasChart } from "@/lib/catalog-meta";
-import { fmtAum, fmtPct, fmtPctSimple } from "@/lib/format";
+import { CCY_SYM, fmtAum, fmtDate, fmtPct, fmtPctSimple } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { MgmtFeeTier } from "@/lib/types";
 
 const SEVERITY_TONE: Record<string, string> = {
   "Высокий": "bg-[var(--neg)]/12 text-[var(--neg)]",
@@ -44,17 +46,28 @@ function KpiCard({
   label,
   value,
   sub,
+  info,
   tone = "neutral",
 }: {
   label: string;
   value: string;
   sub?: string;
+  info?: string;
   tone?: "pos" | "neg" | "neutral";
 }) {
   return (
     <div className="glossy rounded-xl px-4 py-3.5">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-        {label}
+      <div className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        <span>{label}</span>
+        {info && (
+          <span
+            title={info}
+            aria-label={info}
+            className="inline-flex h-3.5 w-3.5 cursor-help items-center justify-center rounded-full border border-current text-[9px] leading-none opacity-60 hover:opacity-100"
+          >
+            ?
+          </span>
+        )}
       </div>
       <div
         className={cn(
@@ -66,6 +79,68 @@ function KpiCard({
         {value}
       </div>
       {sub && <div className="mt-1.5 text-[11px] text-muted-foreground tabular-nums">{sub}</div>}
+    </div>
+  );
+}
+
+const fmtFeePct = (v: number | null) => (v != null ? `${String(v).replace(".", ",")}%` : "—");
+
+/** Fee schedule. Collapses to a one-line summary when all tiers charge the same;
+ *  shows the tier table only when fees actually vary by AUM. Empty columns are hidden. */
+function FeeStructure({ tiers, ccy }: { tiers: MgmtFeeTier[]; ccy: string }) {
+  const sym = CCY_SYM[ccy] ?? ccy;
+  const first = tiers[0];
+  const uniform = tiers.every(
+    (t) => t.mf === first.mf && t.sf === first.sf && t.hurdle === first.hurdle,
+  );
+  const hasSf = tiers.some((t) => t.sf != null);
+  const hasHurdle = tiers.some((t) => t.hurdle != null);
+
+  if (uniform) {
+    return (
+      <div className="glossy rounded-xl px-4 py-3.5 flex flex-wrap gap-x-8 gap-y-2 text-sm">
+        <div>
+          <span className="text-muted-foreground">Management fee&nbsp;</span>
+          <span className="font-semibold tabular-nums">{fmtFeePct(first.mf)}</span>
+        </div>
+        {hasSf && (
+          <div>
+            <span className="text-muted-foreground">Success fee&nbsp;</span>
+            <span className="font-semibold tabular-nums">{fmtFeePct(first.sf)}</span>
+          </div>
+        )}
+        {first.hurdle && (
+          <div>
+            <span className="text-muted-foreground">Над бенчмарком&nbsp;</span>
+            <span className="font-semibold">{first.hurdle}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="glossy rounded-xl overflow-x-auto">
+      <table className="w-full min-w-[420px] text-sm">
+        <thead className="bg-muted/50 text-[10px] uppercase tracking-[0.1em]">
+          <tr>
+            <th className="px-3 py-2.5 text-left">Тир, {sym}</th>
+            <th className="px-3 py-2.5 text-right">MF, %</th>
+            {hasSf && <th className="px-3 py-2.5 text-right">SF, %</th>}
+            {hasHurdle && <th className="px-3 py-2.5 text-left">Над бенчмарком</th>}
+          </tr>
+        </thead>
+        <tbody className="tabular-nums">
+          {tiers.map((t, i) => (
+            <tr key={i} className="border-t border-border">
+              <td className="px-3 py-2">{t.tier}</td>
+              <td className="px-3 py-2 text-right">{t.mf ?? "—"}</td>
+              {hasSf && <td className="px-3 py-2 text-right">{t.sf ?? "—"}</td>}
+              {hasHurdle && <td className="px-3 py-2 text-muted-foreground">{t.hurdle ?? "—"}</td>}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -139,8 +214,8 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
 
   return (
     <div className="space-y-8">
-      {/* Hero header */}
-      <div className="flex items-start justify-between gap-4">
+      {/* Hero header — sticks to top on desktop scroll (mobile keeps the fixed app bar) */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between md:sticky md:top-0 md:z-20 md:-mx-6 md:px-6 md:py-3 md:bg-background/85 md:backdrop-blur-sm md:border-b md:border-border/60">
         <div className="min-w-0">
           <Link
             href="/catalog"
@@ -162,15 +237,44 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
             </div>
           </div>
         </div>
-        {me?.is_superuser && (
-          <Link
-            href={`/catalog/funds/${fund.key}/edit`}
-            className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-accent transition-colors shrink-0"
-          >
-            Редактировать
-          </Link>
-        )}
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <PresentationBlock entityType="fund" entityId={fund.key} isAdmin={!!me?.is_superuser} />
+          {me?.is_superuser && (
+            <Link
+              href={`/catalog/funds/${fund.key}/edit`}
+              className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-accent transition-colors shrink-0"
+            >
+              Редактировать
+            </Link>
+          )}
+        </div>
       </div>
+
+      {/* Headline investment params — lead facts, mirrors the presentation deck */}
+      {(fund.target_yield || fund.horizon) && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {fund.target_yield && (
+            <div className="glossy rounded-xl px-5 py-4">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Инвестиционная цель
+              </div>
+              <div className="mt-1.5 text-xl font-bold tracking-tight tabular-nums">{fund.target_yield}</div>
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                % годовых на рекомендуемом горизонте · ориентир, не гарантия
+              </div>
+            </div>
+          )}
+          {fund.horizon && (
+            <div className="glossy rounded-xl px-5 py-4">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Инвестиционный горизонт
+              </div>
+              <div className="mt-1.5 text-xl font-bold tracking-tight">{fund.horizon}</div>
+              <div className="mt-1 text-[11px] text-muted-foreground">рекомендуемый срок вложения</div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Performance hero — only when fund has a NAV series (ИПИФ + ликвидность). */}
       {showChart && (
@@ -240,15 +344,18 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
           <KpiCard
             label="CAGR"
             value={fmtPct(s?.cagr ?? null)}
+            info="Compound Annual Growth Rate — среднегодовой темп роста стоимости пая за выбранный период."
             tone={s?.cagr != null ? (s.cagr >= 0 ? "pos" : "neg") : "neutral"}
           />
           <KpiCard
             label="Волатильность (год.)"
             value={fmtPctSimple(s?.vol ?? null, 1)}
+            info="Годовая волатильность — стандартное отклонение доходностей, приведённое к годовому масштабу. Мера разброса результата."
           />
           <KpiCard
             label="Макс. просадка"
             value={fmtPct(s?.max_dd ?? null, 1)}
+            info="Максимальное снижение стоимости от локального пика до последующего минимума за период."
             tone={s?.max_dd != null && s.max_dd < 0 ? "neg" : "neutral"}
           />
         </div>
@@ -262,9 +369,6 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
             <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-2">
               Ключевые факты
             </div>
-            <KV label="Цель" value={fund.target_yield} />
-            <KV label="Горизонт" value={fund.horizon} />
-            <KV label="Валюта" value={fund.native_currency} />
             <KV
               label="AUM"
               value={
@@ -272,14 +376,13 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
                   <span>
                     {fmtAum(fund.aum, fund.aum_currency ?? fund.native_currency)}
                     {fund.aum_as_of && (
-                      <span className="ml-1 text-[10px] font-normal text-muted-foreground">на {fund.aum_as_of}</span>
+                      <span className="ml-1 text-[10px] font-normal text-muted-foreground">на {fmtDate(fund.aum_as_of)}</span>
                     )}
                   </span>
                 ) : null
               }
             />
-            <KV label="Дата запуска" value={fund.inception_date} />
-            <KV label="Тип" value={fund.contract_type} />
+            <KV label="Дата запуска" value={fund.inception_date ? fmtDate(fund.inception_date) : null} />
             <KV label="Ликвидность" value={fund.liquidity_label} />
             <KV label="Интервал" value={fund.interval_label} />
             <KV
@@ -301,9 +404,30 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
               <RiskBar score={fund.risk_score} />
             </div>
           )}
+
+          {fund.documents && fund.documents.length > 0 && (
+            <div className="glossy rounded-xl p-4 space-y-2">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-1">
+                Документы
+              </div>
+              {fund.documents.map((doc, i) => (
+                <a
+                  key={i}
+                  href={doc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 -mx-2 text-sm hover:bg-accent transition-colors"
+                >
+                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 truncate">{doc.name}</span>
+                  <Download className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                </a>
+              ))}
+            </div>
+          )}
         </aside>
 
-        <div className="space-y-8">
+        <div className="space-y-8 min-w-0">
           {fund.strategy_goal && (
             <Section title="Цель стратегии">
               <p className="text-sm leading-relaxed">{fund.strategy_goal}</p>
@@ -331,28 +455,7 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
 
           {fund.mgmt_fee_tiers && fund.mgmt_fee_tiers.length > 0 && (
             <Section title="Структура расходов">
-              <div className="glossy rounded-xl overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50 text-[10px] uppercase tracking-[0.1em]">
-                    <tr>
-                      <th className="px-3 py-2.5 text-left">Тир (USD)</th>
-                      <th className="px-3 py-2.5 text-right">MF, %</th>
-                      <th className="px-3 py-2.5 text-right">SF, %</th>
-                      <th className="px-3 py-2.5 text-left">Над бенчмарком</th>
-                    </tr>
-                  </thead>
-                  <tbody className="tabular-nums">
-                    {fund.mgmt_fee_tiers.map((t, i) => (
-                      <tr key={i} className="border-t border-border">
-                        <td className="px-3 py-2">{t.tier}</td>
-                        <td className="px-3 py-2 text-right">{t.mf ?? "—"}</td>
-                        <td className="px-3 py-2 text-right">{t.sf ?? "—"}</td>
-                        <td className="px-3 py-2 text-muted-foreground">{t.hurdle ?? "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <FeeStructure tiers={fund.mgmt_fee_tiers} ccy={fund.native_currency} />
               <div className="text-[11px] text-muted-foreground space-y-0.5 mt-2.5">
                 {(fund.redemption_discount_y1 !== null || fund.redemption_discount_y2 !== null) && (
                   <div>
@@ -389,16 +492,22 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
             </Section>
           )}
 
+        </div>
+      </div>
+
+      {/* Wide data tables — full width so 8-/13-column tables aren't clipped inside the 1fr column */}
+      {(showChart || (fund.top_positions && fund.top_positions.length > 0)) && (
+        <div className="space-y-8">
           {showChart && <PerformanceTables fundKey={fund.key} />}
 
           {fund.top_positions && fund.top_positions.length > 0 && (
             <Section
               title={`Ключевые позиции${
-                fund.top_positions_as_of ? ` (на ${fund.top_positions_as_of})` : ""
+                fund.top_positions_as_of ? ` (на ${fmtDate(fund.top_positions_as_of)})` : ""
               }`}
             >
-              <div className="glossy rounded-xl overflow-hidden">
-                <table className="w-full text-sm">
+              <div className="glossy rounded-xl overflow-x-auto">
+                <table className="w-full min-w-[560px] text-sm">
                   <thead className="bg-muted/50 text-[10px] uppercase tracking-[0.1em]">
                     <tr>
                       <th className="px-3 py-2.5 text-left">Инструмент</th>
@@ -422,7 +531,7 @@ export default function FundDetailPage({ params }: { params: Promise<{ key: stri
             </Section>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 }
