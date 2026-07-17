@@ -149,13 +149,13 @@ function RiskBar({ score }: { score: number | null }) {
   if (!score) return null;
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">низкий</span>
-      <div className="flex gap-1">
+      <span className="shrink-0 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">низкий</span>
+      <div className="flex flex-1 min-w-0 gap-1">
         {[1, 2, 3, 4, 5].map((i) => (
           <div
             key={i}
             className={cn(
-              "h-7 w-9 rounded-md border text-center text-xs leading-7 font-semibold tabular-nums transition-colors",
+              "h-7 flex-1 min-w-0 rounded-md border text-center text-xs leading-7 font-semibold tabular-nums transition-colors",
               i === score
                 ? "border-foreground bg-foreground text-background"
                 : "border-border text-muted-foreground",
@@ -165,7 +165,7 @@ function RiskBar({ score }: { score: number | null }) {
           </div>
         ))}
       </div>
-      <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">высокий</span>
+      <span className="shrink-0 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">высокий</span>
     </div>
   );
 }
