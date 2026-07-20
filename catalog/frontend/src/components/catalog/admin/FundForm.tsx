@@ -214,7 +214,7 @@ export function FundForm({ initial, isNew }: Props) {
               {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </Field>
-          <Field label="Бенчмарк (код)" required hint="RGBITR | MCFTR | CbondsZO_RUB | RUCNYTR_RUB | GLDRUB | RUSFAR">
+          <Field label="Бенчмарк (код)" required hint="RGBITR | MCFTR | CbondsZO_USD | CbondsZO_RUB | RUCNYTR_RUB | GLDRUB | RUSFAR">
             <input required value={data.benchmark ?? ""} onChange={(e) => patch("benchmark", e.target.value)} className={inputCls} />
           </Field>
 

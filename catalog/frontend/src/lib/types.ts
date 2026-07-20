@@ -127,10 +127,10 @@ export interface FundMeta {
 
 export const FUND_META: Record<string, FundMeta> = {
   R5:     { name: "Хедж-фонд Р5",                          native_currency: "RUB", benchmark: "RGBITR",       benchmark_label: "RGBITR" },
-  D5:     { name: "Хедж-фонд Д5",                          native_currency: "USD", benchmark: "CbondsZO_RUB", benchmark_label: "Cbonds ЗО (RUB)" },
+  D5:     { name: "Хедж-фонд Д5",                          native_currency: "USD", benchmark: "CbondsZO_USD", benchmark_label: "Cbonds ЗО (USD)" },
   Yu5:    { name: "Хедж-фонд Ю5",                          native_currency: "CNY", benchmark: "RUCNYTR_RUB",  benchmark_label: "RUCNYTR (RUB)" },
-  D1:     { name: "Хедж-фонд Д1",                          native_currency: "USD", benchmark: "CbondsZO_RUB", benchmark_label: "Cbonds ЗО (RUB)" },
-  VO:     { name: "Валютные облигации с выплатой дохода",  native_currency: "USD", benchmark: "CbondsZO_RUB", benchmark_label: "Cbonds ЗО (RUB)" },
+  D1:     { name: "Хедж-фонд Д1",                          native_currency: "USD", benchmark: "CbondsZO_USD", benchmark_label: "Cbonds ЗО (USD)" },
+  VO:     { name: "Валютные облигации с выплатой дохода",  native_currency: "USD", benchmark: "CbondsZO_USD", benchmark_label: "Cbonds ЗО (USD)" },
   Aplus:  { name: "Хедж-фонд А+",                          native_currency: "RUB", benchmark: "MCFTR",        benchmark_label: "MCFTR" },
   A12080: { name: "Российские акции 120/80",               native_currency: "RUB", benchmark: "MCFTR",        benchmark_label: "MCFTR" },
   R1:     { name: "Облигации Р1",                          native_currency: "RUB", benchmark: "RGBITR",       benchmark_label: "RGBITR" },
@@ -232,7 +232,7 @@ export const INDEX_LIST: { key: string; name: string; sub: string }[] = [
   { key: "RUSFAR",       name: "RUSFAR",          sub: "денежный рынок" },
   { key: "RGBITR",       name: "RGBITR",          sub: "ОФЗ" },
   { key: "MCFTR",        name: "MCFTR",           sub: "российские акции" },
-  { key: "CbondsZO_RUB", name: "Cbonds ЗО (RUB)", sub: "валютные облигации" },
+  { key: "CbondsZO_USD", name: "Cbonds ЗО (USD)", sub: "валютные облигации" },
   { key: "RUCNYTR_RUB",  name: "RUCNYTR (RUB)",   sub: "юаневые облигации" },
   { key: "GLDRUB",       name: "GLDRUB",          sub: "золото" },
 ];

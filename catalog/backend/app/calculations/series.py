@@ -98,6 +98,11 @@ def build_benchmark_series(
 
     Indices are stored in RUB; converted to base_currency via rubToBaseRate.
     manual_index_weights overrides auto-computed weights (frontend manual mode).
+
+    Index providers report at different speeds — Cbonds lags MOEX/FX by a month or
+    two, so the newest market rows carry a fresh RGBITR next to a NULL Cbonds. Those
+    gaps are carried forward from the last known value instead of blanking the whole
+    series, mirroring the per-source carry-forward on the fund page.
     """
     idx_weights = manual_index_weights if manual_index_weights is not None else compute_index_weights(weights)
     total = sum(idx_weights.values())
@@ -120,6 +125,8 @@ def build_benchmark_series(
             return None
         start_vals[k] = val * start_rate
 
+    last_vals: dict[str, float] = {k: start_vals[k] / start_rate for k in norm}
+
     series: list[float] = []
     for d in dates:
         row = market.get(d)
@@ -133,7 +140,9 @@ def build_benchmark_series(
             col = INDEX_TO_COL.get(k, k.lower())
             val = row.get(col)  # type: ignore[literal-required]
             if val is None:
-                return None
+                val = last_vals[k]  # provider hasn't reported yet — hold the last print
+            else:
+                last_vals[k] = val
             v += w * (val * rate / start_vals[k])
         series.append(v * 100)
     return series
