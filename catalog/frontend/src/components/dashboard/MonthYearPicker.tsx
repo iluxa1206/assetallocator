@@ -9,12 +9,19 @@ interface Props {
   value: string;            // "YYYY-MM-DD" or "YYYY-MM" — whatever store holds
   onChange: (v: string) => void;
   availableDates: string[]; // "YYYY-MM-DD" or "YYYY-MM" from API
+  /** Какая дата месяца выбирается кликом: "last" (по умолчанию, конец месяца)
+   * или "first" — первая точка месяца (для полей «от»: даёт выбрать дату формирования). */
+  monthAnchor?: "first" | "last";
 }
 
-export function MonthYearPicker({ value, onChange, availableDates }: Props) {
+export function MonthYearPicker({ value, onChange, availableDates, monthAnchor = "last" }: Props) {
   const toYM = (d: string) => d.slice(0, 7);
 
-  const ymToFull = new Map(availableDates.map((d) => [toYM(d), d]));
+  const ymToFull = new Map<string, string>();
+  for (const d of availableDates) {
+    const ym = toYM(d);
+    if (monthAnchor === "last" || !ymToFull.has(ym)) ymToFull.set(ym, d);
+  }
   const availableYM = new Set(availableDates.map(toYM));
   const years = [...new Set(availableDates.map((d) => parseInt(d.slice(0, 4))))].sort((a,b) => a-b);
 

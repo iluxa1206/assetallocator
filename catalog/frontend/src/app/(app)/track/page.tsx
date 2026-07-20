@@ -7,6 +7,7 @@ import { MonthYearPicker } from "@/components/dashboard/MonthYearPicker";
 import { TrackChart } from "@/components/track/TrackChart";
 import { TrackMetricsGrid, AnchorPanel } from "@/components/track/TrackMetrics";
 import { RollingReturns } from "@/components/track/RollingReturns";
+import { DrawdownBars } from "@/components/track/DrawdownBars";
 import { TRACKS, type TrackSeries } from "@/lib/track-data";
 import { combinedSeries, computeMetrics, fmtDateRu } from "@/lib/track-metrics";
 
@@ -16,6 +17,28 @@ const RANGE_YEARS: Partial<Record<RangeKey, number>> = { "1y": 1, "3y": 3, "5y":
 const RANGE_LABEL: Record<Exclude<RangeKey, "custom">, string> = {
   "1y": "1Г", "3y": "3Г", "5y": "5Л", "10y": "10Л", ytd: "YTD", max: "Всё",
 };
+
+/** Чип-переключатель видимости блока (галочка + подпись). */
+function ToggleChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
+        active
+          ? "border-primary/40 bg-primary/10 text-foreground"
+          : "border-border bg-muted/40 text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <span className={cn("grid h-3 w-3 place-items-center rounded-[3px] border text-[9px] leading-none", active ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/50")}>
+        {active ? "✓" : ""}
+      </span>
+      {children}
+    </button>
+  );
+}
 
 function shiftYears(iso: string, years: number): string {
   const d = new Date(iso);
@@ -66,6 +89,8 @@ function TrackSection({ series }: { series: TrackSeries }) {
   const [range, setRange] = useState<RangeKey>("max");
   const [custom, setCustom] = useState<{ from: string; to: string } | null>(null);
   const [anchor, setAnchor] = useState<string | null>(null);
+  const [showDrawdown, setShowDrawdown] = useState(true);
+  const [showInvestor, setShowInvestor] = useState(true);
 
   const pts = series.points;
   const firstDate = pts[0].d;
@@ -130,7 +155,7 @@ function TrackSection({ series }: { series: TrackSeries }) {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">Период:</span>
-          <MonthYearPicker value={winFrom} onChange={(d) => pickCustom(d, winTo)} availableDates={availableDates} />
+          <MonthYearPicker value={winFrom} onChange={(d) => pickCustom(d, winTo)} availableDates={availableDates} monthAnchor="first" />
           <span className="text-xs text-muted-foreground">—</span>
           <MonthYearPicker value={winTo} onChange={(d) => pickCustom(winFrom, d)} availableDates={availableDates} />
         </div>
@@ -138,7 +163,15 @@ function TrackSection({ series }: { series: TrackSeries }) {
 
       <TrackChart series={series} window={win} anchor={anchorValid} onAnchor={setAnchor} />
 
-      <RollingReturns series={series} window={win} />
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-muted-foreground">Блоки:</span>
+        <ToggleChip active={showDrawdown} onClick={() => setShowDrawdown((v) => !v)}>Просадка</ToggleChip>
+        <ToggleChip active={showInvestor} onClick={() => setShowInvestor((v) => !v)}>Результат инвестора</ToggleChip>
+      </div>
+
+      {showDrawdown && <DrawdownBars series={series} window={win} />}
+
+      {showInvestor && <RollingReturns series={series} window={win} />}
 
       {anchorMetrics && <AnchorPanel m={anchorMetrics} onClear={() => setAnchor(null)} />}
 

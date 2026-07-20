@@ -86,6 +86,25 @@ export function maxDrawdownInfo(series: TrackValue[]): DrawdownInfo | null {
   };
 }
 
+/** Просадка в каждой точке окна: dd = v / бегущий-максимум − 1 (≤ 0).
+ * Идёт по точкам окна (а не по combined) → одинаковое число категорий с
+ * основным графиком и «Доходностью инвестора» (syncId, вертикальное совпадение). */
+export function drawdownOverWindow(
+  points: TrackPoint[],
+): { d: string; dd: number | null; peakDate: string }[] {
+  let peakVal = -Infinity;
+  let peakDate = points[0]?.d ?? "";
+  return points.map((p) => {
+    const v = p.fund ?? p.du;
+    if (v == null) return { d: p.d, dd: null, peakDate };
+    if (v > peakVal) {
+      peakVal = v;
+      peakDate = p.d;
+    }
+    return { d: p.d, dd: peakVal > 0 ? v / peakVal - 1 : 0, peakDate };
+  });
+}
+
 /** Метрики за окно [первая точка .. последняя точка]. Первая точка — база (=100). */
 export function computeMetrics(series: TrackValue[]): WindowMetrics | null {
   if (series.length < 2) return null;
