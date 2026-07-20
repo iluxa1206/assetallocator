@@ -65,17 +65,18 @@ def compute_fx_decomp(
         norm_w = w / w_total
         invested = amount * norm_w * amt_to_base0
 
-        p_rub0 = fund_prices.get(key, {}).get(start_date)
-        p_rubN = fund_prices.get(key, {}).get(end_date)
+        price0 = fund_prices.get(key, {}).get(start_date)
+        priceN = fund_prices.get(key, {}).get(end_date)
         row0 = market.get(start_date)
         rowN = market.get(end_date)
 
-        if p_rub0 is None or p_rubN is None or row0 is None or rowN is None:
+        if price0 is None or priceN is None or row0 is None or rowN is None:
             rows.append(_empty_row(key, meta["name"], native, invested))
             continue
 
-        p_native0 = fund_price_in_currency(p_rub0, native, row0)
-        p_nativeN = fund_price_in_currency(p_rubN, native, rowN)
+        # Official native price where published, converted RUB only before inception.
+        p_native0 = price0["native"] or fund_price_in_currency(price0["rub"], native, row0)
+        p_nativeN = priceN["native"] or fund_price_in_currency(priceN["rub"], native, rowN)
         fx0 = fx_rate(native, base_ccy, row0)
         fxN = fx_rate(native, base_ccy, rowN)
 

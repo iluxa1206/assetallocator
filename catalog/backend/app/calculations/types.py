@@ -20,5 +20,18 @@ class MarketRow(TypedDict, total=False):
 # date_str → MarketRow
 MarketMap = dict[str, MarketRow]
 
-# fund_key → date_str → price_rub
-FundPriceMap = dict[str, dict[str, float]]
+class FundPrice(TypedDict):
+    """NAV of one unit on one date.
+
+    `native` is the official price published in the fund's own currency. It is
+    None for RUB funds (where `rub` already is the native price) and for the
+    pre-inception backtest stretch, which only ever had a RUB series. Where it
+    exists it wins over converting `rub` at the market rate — the two disagree
+    because the fund administrator prices at the CBR rate of the NAV date.
+    """
+    rub: float
+    native: float | None
+
+
+# fund_key → date_str → FundPrice
+FundPriceMap = dict[str, dict[str, FundPrice]]

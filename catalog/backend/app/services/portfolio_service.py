@@ -17,7 +17,7 @@ from app.calculations.fx_rates import fx_rate, rub_to_base_rate
 from app.calculations.metrics import calc_metrics
 from app.calculations.series import build_benchmark_series, build_portfolio_series, find_valid_dates
 from app.models.deposit_rate import DepositRateMax10
-from app.models.fund import Fund, FundQuote
+from app.models.fund import Fund, FundCatalogQuote, FundQuote
 from app.models.market_data import MarketDataPoint
 from app.schemas.portfolio import (
     ExternalItemOut,
@@ -52,10 +52,30 @@ async def _load_market(session: AsyncSession) -> dict:
 
 
 async def _load_fund_prices(session: AsyncSession) -> dict:
-    rows = (await session.execute(select(FundQuote).order_by(FundQuote.date))).scalars().all()
+    """Fund NAV series, official prices taking precedence over the backtest.
+
+    fund_quotes is a reconstructed series that starts well before most funds
+    existed — it is what makes a common 2021 start date possible. fund_catalog_quotes
+    holds the prices published from the fund's inception onward, entered by hand
+    in the admin UI, and those are the numbers the fund cards show.
+
+    Layering the catalog on top means the dashboard and the fund card quote the
+    same figure for any date both cover, and the backtest only supplies the
+    stretch before inception, where no official price exists.
+    """
     prices: dict = {}
-    for r in rows:
-        prices.setdefault(r.fund_key, {})[r.date.isoformat()] = r.price_rub
+    for r in (await session.execute(select(FundQuote).order_by(FundQuote.date))).scalars().all():
+        prices.setdefault(r.fund_key, {})[r.date.isoformat()] = {
+            "rub": r.price_rub,
+            "native": r.price_native,
+        }
+    for r in (
+        await session.execute(select(FundCatalogQuote).order_by(FundCatalogQuote.date))
+    ).scalars().all():
+        prices.setdefault(r.fund_key, {})[r.date.isoformat()] = {
+            "rub": r.price_rub,
+            "native": r.price_native,
+        }
     return prices
 
 

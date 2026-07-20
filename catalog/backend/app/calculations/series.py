@@ -1,7 +1,7 @@
 """Portfolio and benchmark series builders."""
 
 from .allocation import compute_index_weights
-from .constants import INDEX_TO_COL
+from .constants import FUND_META, INDEX_TO_COL
 from .fx_rates import fund_price_in_currency, rub_to_base_rate
 from .types import FundPriceMap, MarketMap
 
@@ -13,16 +13,25 @@ def _fund_price_at(
     fund_prices: FundPriceMap,
     market: MarketMap,
 ) -> float | None:
-    price_rub = fund_prices.get(key, {}).get(date_str)
-    if price_rub is None:
+    """Price of one unit on a date, expressed in base_currency.
+
+    When the report is drawn in the fund's own currency and an official native
+    price exists, use it verbatim. Converting the RUB price at the market rate
+    would answer a different question — the administrator struck NAV at the CBR
+    rate of that date, which is not the rate sitting in market_data.
+    """
+    price = fund_prices.get(key, {}).get(date_str)
+    if price is None:
         return None
+    if base_currency == FUND_META.get(key, {}).get("native_currency") and price["native"] is not None:
+        return price["native"]
     row = market.get(date_str)
     if row is None:
         return None
     rate = rub_to_base_rate(row, base_currency)
     if rate is None:
         return None
-    return price_rub * rate
+    return price["rub"] * rate
 
 
 def find_valid_dates(
