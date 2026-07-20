@@ -47,3 +47,6 @@ catalog/backend/tests/fixtures/expected_vectors.json
 /catalog/.git.old/
 backup_*.dump
 *.dump
+
+# Uploaded presentation PDFs (dev bind mount)
+catalog/backend/data/

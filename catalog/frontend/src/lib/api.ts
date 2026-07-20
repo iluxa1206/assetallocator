@@ -86,6 +86,61 @@ export async function fetchStrategySeries(code: string, range: CatalogRange = "m
   return data;
 }
 
+// ──────────────── Competitors ────────────────
+
+/** One leaderboard row = fund metadata + normalized series + period metrics. */
+export interface CompetitorRow extends FundSeriesPoint {
+  key: string;
+  name: string;
+  short_name?: string | null;
+  provider?: string | null;
+  peer_group?: string | null;
+  kind: "own" | "competitor" | "benchmark";
+  contract_type?: string | null;
+  source?: string | null;
+  last_synced_at?: string | null;
+}
+
+export async function fetchCompetitorLeaderboard(params: {
+  range?: CatalogRange;
+  peer_group?: string;
+  include_own?: boolean;
+}): Promise<CompetitorRow[]> {
+  const { data } = await client.get<CompetitorRow[]>("/api/v1/competitors/leaderboard", { params });
+  return data;
+}
+
+export async function fetchPeerGroups(): Promise<string[]> {
+  const { data } = await client.get<string[]>("/api/v1/competitors/peer-groups");
+  return data;
+}
+
+export interface CompetitorMonthlyRow {
+  month: string;   // "YYYY-MM"
+  date: string;    // actual month-end quote date, "YYYY-MM-DD"
+  price: number;   // unit price / exchange price (RUB)
+  ret: number | null; // month-over-month return, decimal
+}
+
+export interface CompetitorMonthly {
+  key: string;
+  name: string;
+  provider?: string | null;
+  rows: CompetitorMonthlyRow[];
+}
+
+export async function fetchCompetitorMonthly(key: string): Promise<CompetitorMonthly> {
+  const { data } = await client.get<CompetitorMonthly>(`/api/v1/competitors/${key}/monthly`);
+  return data;
+}
+
+export async function syncCompetitors(full = false): Promise<Record<string, number>> {
+  const { data } = await client.post<Record<string, number>>("/api/v1/competitors/sync", null, {
+    params: { full },
+  });
+  return data;
+}
+
 // ──────────────── Fund NAV quotes (admin) ────────────────
 
 export interface FundQuote {
@@ -212,4 +267,123 @@ export interface MeResponse {
 export async function fetchMe(): Promise<MeResponse> {
   const { data } = await client.get<MeResponse>("/api/v1/users/me");
   return data;
+}
+
+/** Manager-role employees only see: dashboard, catalog (own funds), track. */
+export function isRestrictedUser(me?: MeResponse | null): boolean {
+  return !!me && !me.is_superuser && me.role === "manager";
+}
+
+// ──────────────── Admin ────────────────
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  is_active: boolean;
+  is_superuser: boolean;
+  created_at: string;
+}
+
+export interface InvitationRow {
+  id: string;
+  email: string;
+  role: string;
+  token: string;
+  expires_at: string;
+  created_at: string;
+  status: "pending" | "used" | "expired";
+  is_reset: boolean;
+}
+
+export async function fetchAdminUsers(): Promise<AdminUser[]> {
+  const { data } = await client.get<AdminUser[]>("/api/v1/admin/users");
+  return data;
+}
+
+export async function updateUser(
+  id: string,
+  patch: { is_active?: boolean; role?: string; full_name?: string },
+): Promise<AdminUser> {
+  const { data } = await client.patch<AdminUser>(`/api/v1/users/${id}`, patch);
+  return data;
+}
+
+export async function fetchInvitations(): Promise<InvitationRow[]> {
+  const { data } = await client.get<InvitationRow[]>("/api/v1/admin/invitations");
+  return data;
+}
+
+export async function createInvitation(email: string, role = "manager"): Promise<InvitationRow> {
+  const { data } = await client.post<InvitationRow>("/api/v1/admin/invitations", { email, role });
+  return data;
+}
+
+export async function revokeInvitation(id: string): Promise<void> {
+  await client.delete(`/api/v1/admin/invitations/${id}`);
+}
+
+export interface AuditEventRow {
+  id: string;
+  user_id: string | null;
+  user_email: string | null;
+  user_name: string | null;
+  action: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface AuditQuery {
+  user_id?: string;
+  action?: string;
+  date_from?: string;
+  date_to?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export async function fetchAuditLog(q: AuditQuery = {}): Promise<{ total: number; events: AuditEventRow[] }> {
+  const { data } = await client.get<{ total: number; events: AuditEventRow[] }>("/api/v1/admin/audit", { params: q });
+  return data;
+}
+
+// ──────────────── Attachments (presentation PDFs) ────────────────
+
+export type AttachmentEntity = "fund" | "strategy" | "general";
+
+export interface AttachmentInfo {
+  id: string;
+  filename: string;
+  size: number;
+  created_at: string;
+}
+
+export async function fetchAttachment(entityType: AttachmentEntity, entityId: string): Promise<AttachmentInfo | null> {
+  try {
+    const { data } = await client.get<AttachmentInfo>(`/api/v1/attachments/${entityType}/${entityId}`);
+    return data;
+  } catch (e) {
+    if (axios.isAxiosError(e) && e.response?.status === 404) return null;
+    throw e;
+  }
+}
+
+export function attachmentDownloadUrl(entityType: AttachmentEntity, entityId: string): string {
+  return `/api/v1/attachments/${entityType}/${entityId}/download`;
+}
+
+export async function uploadAttachment(
+  entityType: AttachmentEntity,
+  entityId: string,
+  file: File,
+): Promise<AttachmentInfo> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const { data } = await client.put<AttachmentInfo>(`/api/v1/attachments/${entityType}/${entityId}`, fd);
+  return data;
+}
+
+export async function deleteAttachment(entityType: AttachmentEntity, entityId: string): Promise<void> {
+  await client.delete(`/api/v1/attachments/${entityType}/${entityId}`);
 }

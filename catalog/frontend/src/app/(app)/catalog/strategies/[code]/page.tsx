@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Layers, Shield, Flame, ChevronLeft, type LucideIcon } from "lucide-react";
 import { fetchStrategy, fetchStrategySeries, fetchFunds, fetchMe, type CatalogRange } from "@/lib/api";
 import { PerfChart } from "@/components/catalog/PerfChart";
+import { PresentationBlock } from "@/components/catalog/PresentationBlock";
 import { PeriodSwitcher, RANGE_RETURN_LABEL } from "@/components/catalog/PeriodSwitcher";
 import { fmtPct, fmtPctSimple } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -135,14 +136,17 @@ export default function StrategyDetailPage({ params }: { params: Promise<{ code:
             </div>
           </div>
         </div>
-        {me?.is_superuser && (
-          <Link
-            href={`/catalog/strategies/${s.code}/edit`}
-            className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-accent transition-colors shrink-0"
-          >
-            Редактировать
-          </Link>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          <PresentationBlock entityType="strategy" entityId={s.code} isAdmin={!!me?.is_superuser} />
+          {me?.is_superuser && (
+            <Link
+              href={`/catalog/strategies/${s.code}/edit`}
+              className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-accent transition-colors shrink-0"
+            >
+              Редактировать
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Backtested performance hero — engine-computed from composition since inception */}

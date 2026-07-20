@@ -15,10 +15,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.calculations.constants import INDEX_TO_COL
 from app.calculations.metrics import calc_metrics
-from app.core.users import current_active_user, current_superuser
+from app.core.users import current_active_user, current_superuser, is_restricted
 from app.db.session import get_async_session
 from app.models.fund import Fund, FundCatalogQuote as FundQuote
 from app.models.market_data import MarketDataPoint
+from app.models.user import User
 from app.schemas.fund import FundCreate, FundOut, FundUpdate
 from app.schemas.fund_quote import BulkUploadResult, FundQuoteIn, FundQuoteOut
 
@@ -50,16 +51,22 @@ _RANGE_DAYS = {"1m": 30, "3m": 90, "6m": 180, "12m": 365, "1y": 365, "2y": 730, 
 
 
 def _market_val_at(d: date, col: str, sorted_dates: list[date], market_by_date: dict) -> float | None:
-    """Benchmark index value on the last market date <= `d` (nearest-preceding)."""
+    """Benchmark index value on the last market date <= `d` (nearest-preceding).
+
+    Walks back past rows where THIS column is NULL — market rows are filled
+    per-source, so a fresh row with FX/MOEX data must not blank out a benchmark
+    whose provider (e.g. Cbonds) hasn't reported yet.
+    """
     import bisect
 
     pos = bisect.bisect_right(sorted_dates, d) - 1
-    if pos < 0:
-        return None
-    row = market_by_date.get(sorted_dates[pos])
-    if row is None:
-        return None
-    return getattr(row, col, None)
+    while pos >= 0:
+        row = market_by_date.get(sorted_dates[pos])
+        val = getattr(row, col, None) if row is not None else None
+        if val is not None:
+            return val
+        pos -= 1
+    return None
 
 
 def _step_returns(series: list[float]) -> list[float]:
@@ -83,12 +90,33 @@ def _beta(fund_norm: list[float], bench_norm: list[float]) -> float | None:
 @router.get("/series")
 async def funds_series(
     range_: str = Query("max", alias="range"),
+    kind: str = Query("own"),
     session: AsyncSession = Depends(get_async_session),
-    _user=Depends(current_active_user),
+    user: User = Depends(current_active_user),
 ) -> dict[str, Any]:
-    """`range` = "1m"|"3m"|"6m"|"12m"|"2y"|"3y"|"ytd"|"max". Returns {fund_key: {points, bench_points, ret, ...}}."""
-    funds = list((await session.scalars(select(Fund).where(Fund.is_active.is_(True)))).all())
+    """`range` = "1m"|"3m"|"6m"|"12m"|"2y"|"3y"|"ytd"|"max". Returns {fund_key: {points, bench_points, ret, ...}}.
 
+    `kind` filters the fund set: "own" (default, catalog funds) | "competitor" | "benchmark" | "all".
+    """
+    if is_restricted(user):
+        kind = "own"
+    q = select(Fund).where(Fund.is_active.is_(True))
+    if kind != "all":
+        q = q.where(Fund.kind == kind)
+    funds = list((await session.scalars(q)).all())
+    return await _compute_series(funds, range_, session)
+
+
+async def _compute_series(
+    funds: list[Fund], range_: str, session: AsyncSession, monthly: bool = False
+) -> dict[str, Any]:
+    """Core NAV-series + metrics computation shared by /funds/series and /competitors.
+
+    `monthly=True` collapses each fund's series to one point per calendar month (the last
+    quote in the month) before normalizing — the competitors overlay is month-binned so
+    daily competitor funds align with month-end own funds. Catalog cards keep the default:
+    the full series evenly downsampled to 40 points for light sparklines.
+    """
     latest = await session.scalar(select(FundQuote.date).order_by(FundQuote.date.desc()).limit(1))
     if latest is None:
         return {}
@@ -135,6 +163,17 @@ async def funds_series(
             if use_native
             else [(d, p_rub) for d, p_rub, _ in raw]
         )
+
+        # Month-bin: keep the last quote of each calendar month. `series` is date-ascending,
+        # so the later write per (year, month) wins → month-end point.
+        if monthly:
+            by_month: dict[tuple[int, int], tuple[date, float]] = {}
+            for d, p in series:
+                by_month[(d.year, d.month)] = (d, p)
+            series = [by_month[k] for k in sorted(by_month)]
+            if len(series) < 2:
+                result[fund.key] = empty.copy()
+                continue
 
         # Anchor the window on the last point at/before its boundary, so the baseline is the
         # prior close (YTD → prior year-end; rolling → ~N months ago) and there's always ≥2 points.
@@ -189,7 +228,8 @@ async def funds_series(
         beta = _beta([v for _, v in normed], bench_norm) if bench_norm is not None else None
 
         # One set of indices → fund line and benchmark line stay aligned after downsampling.
-        idxs = _downsample_indices(len(normed), 40)
+        # monthly series are already compact → keep every month; catalog downsamples to 40.
+        idxs = list(range(len(normed))) if monthly else _downsample_indices(len(normed), 40)
         ds_dates = [normed[i][0] for i in idxs]
         ytd_threshold = date(series[-1][0].year, 1, 1)
         ytd_start_idx: int | None = next((i for i, d in enumerate(ds_dates) if d >= ytd_threshold), None)
@@ -224,10 +264,15 @@ async def list_funds(
     currency: str | None = None,
     risk: int | None = None,
     include_inactive: bool = False,
+    kind: str = Query("own"),
     session: AsyncSession = Depends(get_async_session),
-    _user=Depends(current_active_user),
+    user: User = Depends(current_active_user),
 ) -> list[Fund]:
+    if is_restricted(user):
+        kind = "own"
     stmt = select(Fund).order_by(Fund.sort_order)
+    if kind != "all":
+        stmt = stmt.where(Fund.kind == kind)
     if not include_inactive:
         stmt = stmt.where(Fund.is_active.is_(True))
     if category:
@@ -243,10 +288,10 @@ async def list_funds(
 async def get_fund(
     key: str,
     session: AsyncSession = Depends(get_async_session),
-    _user=Depends(current_active_user),
+    user: User = Depends(current_active_user),
 ) -> Fund:
     fund = await session.get(Fund, key)
-    if fund is None:
+    if fund is None or (is_restricted(user) and fund.kind != "own"):
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Fund {key!r} not found")
     return fund
 
@@ -313,9 +358,11 @@ async def list_quotes(
     date_from: date | None = Query(None, alias="from"),
     date_to: date | None = Query(None, alias="to"),
     session: AsyncSession = Depends(get_async_session),
-    _user=Depends(current_active_user),
+    user: User = Depends(current_active_user),
 ) -> list[FundQuote]:
-    await _ensure_fund_exists(key, session)
+    fund = await _ensure_fund_exists(key, session)
+    if is_restricted(user) and fund.kind != "own":
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Fund {key!r} not found")
     stmt = select(FundQuote).where(FundQuote.fund_key == key).order_by(FundQuote.date)
     if date_from:
         stmt = stmt.where(FundQuote.date >= date_from)
@@ -485,7 +532,7 @@ def _abs_and_annual(v0: float, vn: float, days: int) -> tuple[float, float | Non
 async def fund_performance(
     key: str,
     session: AsyncSession = Depends(get_async_session),
-    _user=Depends(current_active_user),
+    user: User = Depends(current_active_user),
 ) -> dict[str, Any]:
     """Period returns + month-by-month grid.
 
@@ -494,6 +541,8 @@ async def fund_performance(
       - `monthly`: [{"date": "YYYY-MM", "ret": <decimal>}, …]  (one entry per closed month)
     """
     fund = await _ensure_fund_exists(key, session)
+    if is_restricted(user) and fund.kind != "own":
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Fund {key!r} not found")
     rows = (await session.execute(
         select(FundQuote.date, FundQuote.price_rub, FundQuote.price_native)
         .where(FundQuote.fund_key == key)
@@ -548,19 +597,23 @@ async def fund_performance(
     periods["inception"] = {"abs": abs_r, "annual": ann_r}
 
     # Monthly closing prices → month-over-month returns
-    by_month: dict[tuple[int, int], float] = {}
+    by_month: dict[tuple[int, int], tuple[date, float]] = {}
     for d, p in zip(dates, prices, strict=True):
-        by_month[(d.year, d.month)] = p   # latest price wins (dates are sorted asc)
+        by_month[(d.year, d.month)] = (d, p)   # latest point wins (dates are sorted asc)
 
     monthly: list[dict[str, Any]] = []
     sorted_months = sorted(by_month.keys())
     prev_price: float | None = None
     for ym in sorted_months:
-        p = by_month[ym]
-        if prev_price is None or prev_price <= 0:
-            ret: float | None = None
+        month_d, p = by_month[ym]
+        if prev_price is not None and prev_price > 0:
+            ret: float | None = p / prev_price - 1.0
+        elif month_d > dates[0] and prices[0] > 0:
+            # Formation month: the series starts mid-month (e.g. фонд сформирован 5 мая) —
+            # the first month's return is measured from the formation price, not skipped.
+            ret = p / prices[0] - 1.0
         else:
-            ret = p / prev_price - 1.0
+            ret = None  # base point only (series starts at month close) — no return yet
         monthly.append({"date": f"{ym[0]:04d}-{ym[1]:02d}", "ret": ret})
         prev_price = p
 

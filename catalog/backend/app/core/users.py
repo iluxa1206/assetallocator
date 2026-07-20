@@ -1,15 +1,16 @@
 import uuid
 from collections.abc import AsyncGenerator
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
 from fastapi_users import BaseUserManager, FastAPIUsers, UUIDIDMixin
+from fastapi_users.exceptions import InvalidPasswordException
 from fastapi_users.authentication import AuthenticationBackend, BearerTransport, CookieTransport, JWTStrategy
 from fastapi_users.db import SQLAlchemyUserDatabase
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.session import get_async_session
-from app.models.user import User
+from app.models.user import Role, User
 
 
 async def get_user_db(session: AsyncSession = Depends(get_async_session)) -> AsyncGenerator[SQLAlchemyUserDatabase, None]:  # type: ignore[type-arg]
@@ -19,6 +20,17 @@ async def get_user_db(session: AsyncSession = Depends(get_async_session)) -> Asy
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     reset_password_token_secret = settings.secret_key
     verification_token_secret = settings.secret_key
+
+    async def validate_password(self, password: str, user) -> None:  # type: ignore[override]
+        if len(password) < 8:
+            raise InvalidPasswordException("Пароль должен быть не короче 8 символов")
+
+    async def on_after_login(self, user: User, request=None, response=None) -> None:
+        from app.models.audit_event import AuditEvent  # local import — avoids a models/core cycle
+
+        session = self.user_db.session  # type: ignore[attr-defined]
+        session.add(AuditEvent(user_id=user.id, action="auth.login", payload={}))
+        await session.commit()
 
 
 async def get_user_manager(user_db: SQLAlchemyUserDatabase = Depends(get_user_db)) -> AsyncGenerator[UserManager, None]:  # type: ignore[type-arg]
@@ -58,3 +70,15 @@ fastapi_users = FastAPIUsers[User, uuid.UUID](get_user_manager, [auth_backend, b
 
 current_active_user = fastapi_users.current_user(active=True)
 current_superuser = fastapi_users.current_user(active=True, superuser=True)
+
+
+def is_restricted(user: User) -> bool:
+    """Manager-role employees only see: dashboard, catalog (own funds), track."""
+    return not user.is_superuser and user.role == Role.MANAGER
+
+
+async def current_full_user(user: User = Depends(current_active_user)) -> User:
+    """Active user with unrestricted section access; manager-role users get 403."""
+    if is_restricted(user):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Раздел недоступен")
+    return user

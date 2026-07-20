@@ -15,6 +15,7 @@ import {
 } from "@/lib/api";
 import { Sparkline } from "@/components/catalog/Sparkline";
 import { PeriodSwitcher, RANGE_RETURN_LABEL_SHORT } from "@/components/catalog/PeriodSwitcher";
+import { CompanyPresentations } from "@/components/catalog/CompanyPresentations";
 import { CATEGORY_META, CATEGORY_ORDER, FALLBACK_CATEGORY, hasChart } from "@/lib/catalog-meta";
 import { fmtPct, fmtPctSimple } from "@/lib/format";
 import type { Fund } from "@/lib/types";
@@ -605,6 +606,9 @@ export default function CatalogPage() {
         </div>
       </div>
       </div>
+
+      {/* ── Company presentation decks ── */}
+      <CompanyPresentations isAdmin={!!me?.is_superuser} />
 
       {/* ── Empty state ── */}
       {activeFunds.length === 0 && (

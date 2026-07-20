@@ -18,6 +18,17 @@ class Fund(Base):
     benchmark_label: Mapped[str] = mapped_column(default="")
     is_active: Mapped[bool] = mapped_column(default=True)
 
+    # ── Peer tracking (competitors tab) ──────────────────────────────
+    # kind partitions the catalog: 'own' funds show in /catalog, 'competitor'
+    # and 'benchmark' rows are tracked only for the /competitors comparison tab.
+    kind: Mapped[str] = mapped_column(default="own")
+    provider: Mapped[str | None] = mapped_column(nullable=True)  # УК name for competitors
+    source: Mapped[str | None] = mapped_column(nullable=True)  # 'moex' | 'investfunds' | 'manual'
+    source_ref: Mapped[str | None] = mapped_column(nullable=True)  # MOEX secid or investfunds fund_id
+    source_board: Mapped[str | None] = mapped_column(nullable=True)  # MOEX board: TQTF/TQIF/index
+    peer_group: Mapped[str | None] = mapped_column(nullable=True)  # strategy bucket for filtering
+    last_synced_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
     short_name: Mapped[str | None] = mapped_column(nullable=True)
     category: Mapped[str | None] = mapped_column(nullable=True)
     contract_type: Mapped[str | None] = mapped_column(nullable=True)

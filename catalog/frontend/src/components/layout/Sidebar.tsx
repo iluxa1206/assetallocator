@@ -4,26 +4,37 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, BookOpen, ChartSpline,
+  LayoutDashboard, BookOpen, ChartSpline, Swords, ShieldCheck,
   ChevronLeft, ChevronRight, Menu, X, LogOut,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchMe } from "@/lib/api";
+import { fetchMe, isRestrictedUser } from "@/lib/api";
 import { ThemeToggle } from "./ThemeToggle";
 import { Logo, LogoMark } from "./Logo";
 import { cn } from "@/lib/utils";
 
-const NAV = [
-  { href: "/dashboard", label: "Дашборд", Icon: LayoutDashboard, ready: true },
+type NavEntry = {
+  href: string;
+  label: string;
+  Icon: typeof LayoutDashboard;
+  ready: boolean;
+  fullAccessOnly?: boolean;
+  adminOnly?: boolean;
+};
+
+const NAV: NavEntry[] = [
+  { href: "/dashboard", label: "Портфель", Icon: LayoutDashboard, ready: true },
   { href: "/catalog",   label: "Каталог",  Icon: BookOpen,        ready: true },
   { href: "/track",     label: "Трек",     Icon: ChartSpline,     ready: true },
+  { href: "/competitors", label: "Конкуренты", Icon: Swords,       ready: true, fullAccessOnly: true },
+  { href: "/admin",     label: "Админ",    Icon: ShieldCheck,     ready: true, adminOnly: true },
 ];
 
-function NavItems({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+function NavItems({ collapsed, items, onNavigate }: { collapsed: boolean; items: NavEntry[]; onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
     <>
-      {NAV.map(({ href, label, Icon, ready }) =>
+      {items.map(({ href, label, Icon, ready }) =>
         ready ? (
           <Link
             key={href}
@@ -76,6 +87,12 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
+  // While `me` is loading, hide restricted items — brief flash for admins beats
+  // showing managers a section they can't open.
+  const restricted = !me || isRestrictedUser(me);
+  const navItems = NAV.filter(
+    (item) => (!item.fullAccessOnly || !restricted) && (!item.adminOnly || me?.is_superuser),
+  );
 
   async function logout() {
     try {
@@ -122,7 +139,7 @@ export function Sidebar() {
         </div>
 
         <nav className="flex-1 py-4 space-y-1 px-2 overflow-y-auto">
-          <NavItems collapsed={collapsed} />
+          <NavItems collapsed={collapsed} items={navItems} />
         </nav>
 
         <div className="border-t border-sidebar-border p-2">
@@ -197,7 +214,7 @@ export function Sidebar() {
           </div>
 
           <nav className="flex-1 py-4 space-y-1 px-2 overflow-y-auto">
-            <NavItems collapsed={false} onNavigate={() => setMobileOpen(false)} />
+            <NavItems collapsed={false} items={navItems} onNavigate={() => setMobileOpen(false)} />
           </nav>
 
           <div className="border-t border-sidebar-border p-2">

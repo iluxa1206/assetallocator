@@ -18,5 +18,8 @@ class Settings(BaseSettings):
 
     app_url: str = "http://localhost:3000"
 
+    # Uploaded presentation PDFs; relative to the backend workdir (/app in Docker).
+    attachments_dir: str = "data/attachments"
+
 
 settings = Settings()

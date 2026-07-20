@@ -23,3 +23,10 @@ class UserUpdate(schemas.BaseUserUpdate):
     email: str | None = None
     full_name: str | None = None
     role: Role | None = None
+
+    def create_update_dict(self) -> dict:
+        # Safe variant used for PATCH /users/me: users must not change their own role
+        # (privilege escalation); superuser PATCH /users/{id} uses create_update_dict_superuser.
+        d = super().create_update_dict()
+        d.pop("role", None)
+        return d
