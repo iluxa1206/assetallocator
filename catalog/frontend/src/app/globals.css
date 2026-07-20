@@ -566,3 +566,26 @@ html.dark body {
 @media (prefers-reduced-motion: reduce) {
   .t-input { animation: none !important; transform: none !important; }
 }
+/* ── Печать отчёта (ExportDialog) ──
+   #print-report-root — копия отчёта прямо под <body> (React-портал), вне
+   скролл/overflow-контейнеров приложения, иначе печать обрезается одной страницей.
+   Виден только в print-режиме при активном классе print-report-mode. */
+#print-report-root {
+  display: none;
+}
+@media print {
+  body.print-report-mode > *:not(#print-report-root) {
+    display: none !important;
+  }
+  body.print-report-mode #print-report-root {
+    display: block !important;
+  }
+  body.print-report-mode {
+    overflow: visible !important;
+    background: #fff !important;
+  }
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+}

@@ -1,14 +1,14 @@
 "use client";
 
-import { useRef } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { usePortfolioStore } from "@/stores/portfolioStore";
-import { ExportButtons } from "@/components/dashboard/ExportButtons";
+import { ExportDialog } from "@/components/dashboard/report/ExportDialog";
 import { computePortfolio } from "@/lib/api";
 import { SetupGrid } from "@/components/dashboard/SetupGrid";
 import { KpiStrip } from "@/components/dashboard/KpiStrip";
 import { AllocationChart } from "@/components/dashboard/AllocationChart";
 import { MainChart } from "@/components/dashboard/MainChart";
+import { BacktestReturns } from "@/components/dashboard/BacktestReturns";
 import { ComponentTable } from "@/components/dashboard/ComponentTable";
 import { CompareTable } from "@/components/dashboard/CompareTable";
 import { FxTable } from "@/components/dashboard/FxTable";
@@ -26,7 +26,6 @@ const BASE_CURRENCIES = ["RUB", "USD", "CNY"] as const;
 
 export default function DashboardPage() {
   const s = usePortfolioStore();
-  const reportRef = useRef<HTMLDivElement>(null);
 
   const req = {
     risk: s.risk,
@@ -69,7 +68,7 @@ export default function DashboardPage() {
   const availableDates = (data?.available_dates ?? []).filter((d) => d >= MIN_DATE);
 
   return (
-    <div className="space-y-8" ref={reportRef}>
+    <div className="space-y-8">
       {/* ═══════════════════════════════════════
           СЕКЦИЯ 1: Подбор стратегии
       ═══════════════════════════════════════ */}
@@ -177,9 +176,20 @@ export default function DashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 py-5 border-y border-border">
           <div>
             <p className="text-sm font-medium">Выгрузить рекомендацию для клиента</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Снимок аллокации и бэктеста — PNG для письма или печать в PDF</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Чистый отчёт: PNG для письма, печать в PDF или готовый текст</p>
           </div>
-          <ExportButtons targetRef={reportRef} fileName={`Стратегия_${riskProfile?.name ?? "портфель"}`} />
+          <ExportDialog
+            data={data}
+            params={{
+              amount: s.amount,
+              amountCcy: s.amount_ccy,
+              risk: s.risk,
+              ccy: s.ccy,
+              baseCurrency: s.base_currency,
+              depositTermMonths: s.deposit_term_months,
+            }}
+            fileName={`Стратегия_${riskProfile?.name ?? "портфель"}`}
+          />
         </div>
       )}
 
@@ -262,6 +272,18 @@ export default function DashboardPage() {
             cpi={data.cpi_series}
             deposit={data.deposit_series}
             portfolioName={riskProfile?.name}
+          />
+
+          {/* Monthly returns table (collapsible, per-line) */}
+          <BacktestReturns
+            dates={data.dates}
+            portfolio={data.portfolio_series}
+            benchmark={data.benchmark_series}
+            cpi={data.cpi_series}
+            deposit={data.deposit_series}
+            portfolioName={riskProfile?.name}
+            depositTerm={s.deposit_term_months}
+            currencyLabel={CCY_LABEL[s.base_currency]}
           />
 
           {/* Comparison table */}
