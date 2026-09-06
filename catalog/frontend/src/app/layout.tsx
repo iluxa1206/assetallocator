@@ -11,7 +11,11 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "SAA · Strategy Asset Allocation",
+  // Дочерние сегменты задают только своё имя — суффикс добавляется шаблоном.
+  title: {
+    default: "SAA · Strategy Asset Allocation",
+    template: "%s · SAA",
+  },
   description: "Конструктор модельных инвестиционных портфелей",
 };
 

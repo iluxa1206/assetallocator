@@ -8,22 +8,22 @@ import { RISK_PROFILES, CCY_STRATEGIES, ASSET_CLASS_LABEL } from "@/lib/types";
 import { fmtCompact } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-// Coherent institutional ramp: deep navy → light steel. Largest holdings render darkest.
-const FUND_RAMP = [
-  "#1e2b52", "#26396e", "#2a4ba0", "#39599f", "#4b6aad",
-  "#5f7cba", "#7791c9", "#92a8d6", "#aebde3", "#c9d4ee",
-];
+// Рампы живут в globals.css (--alloc-*): в light идут навстречу тёмному краю,
+// в dark развёрнуты к светлому. Раньше хексы были захардкожены здесь и в тёмной
+// теме крайний сектор (#1e2b52) давал 1.3:1 к фону — его просто не было видно.
+// Отчёт для клиента (PortfolioReport) намеренно держит собственную light-палитру.
+const FUND_RAMP = Array.from({ length: 10 }, (_, i) => `var(--alloc-${i + 1})`);
 const fundColor = (i: number) => FUND_RAMP[i % FUND_RAMP.length];
 
-// External assets — neutral warm-grey ramp, visually distinct from our navy funds.
-const EXT_RAMP = ["#6b7280", "#7d8494", "#9098a6", "#a4abb8", "#b8becb"];
+// Внешние активы — нейтральный серый, визуально отделён от синего наших фондов.
+const EXT_RAMP = Array.from({ length: 5 }, (_, i) => `var(--alloc-ext-${i + 1})`);
 const extColor = (j: number) => EXT_RAMP[j % EXT_RAMP.length];
 
 const CCY_COLORS: Record<string, string> = {
-  RUB: "#2a4ba0",
-  USD: "#4b6aad",
-  CNY: "#7791c9",
-  GLD: "#9aa6c8",
+  RUB: "var(--alloc-rub)",
+  USD: "var(--alloc-usd)",
+  CNY: "var(--alloc-cny)",
+  GLD: "var(--alloc-gld)",
 };
 
 const CCY_NAMES: Record<string, string> = {
@@ -157,7 +157,7 @@ export function AllocationChart({ components, amount, amountCcy, currencyBreakdo
             </p>
             {externalAdjusted && (
               <span
-                className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary ring-1 ring-primary/20 shrink-0"
+                className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary ring-1 ring-primary/20 shrink-0"
                 title="Веса фондов скорректированы под внешние активы клиента"
               >
                 скорр.
@@ -211,7 +211,7 @@ export function AllocationChart({ components, amount, amountCcy, currencyBreakdo
             </PieChart>
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
               <span className="text-base font-bold leading-tight">{centerValue}</span>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wide mt-1">{centerLabel}</span>
+              <span className="text-[11px] text-muted-foreground uppercase tracking-wide mt-1">{centerLabel}</span>
             </div>
           </div>
         </div>
@@ -223,7 +223,7 @@ export function AllocationChart({ components, amount, amountCcy, currencyBreakdo
               <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: e.color }} />
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{e.label}</p>
-                <p className="text-muted-foreground text-[10px] truncate">{e.sub}</p>
+                <p className="text-muted-foreground text-[11px] truncate">{e.sub}</p>
               </div>
               <span className="tabular-nums font-medium shrink-0">{e.pct.toFixed(1).replace(".", ",")}%</span>
               <span className="tabular-nums text-muted-foreground shrink-0">{fmtCompact(e.money, baseCurrency)}</span>
@@ -263,7 +263,7 @@ export function AllocationChart({ components, amount, amountCcy, currencyBreakdo
             </PieChart>
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
               <span className="text-base font-bold leading-tight">{(rubV?.pct ?? 0).toFixed(0)} / {valPctV.toFixed(0)}</span>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wide mt-1">ВАЛЮТНЫЙ МИКС</span>
+              <span className="text-[11px] text-muted-foreground uppercase tracking-wide mt-1">ВАЛЮТНЫЙ МИКС</span>
             </div>
           </div>
         </div>
@@ -275,7 +275,7 @@ export function AllocationChart({ components, amount, amountCcy, currencyBreakdo
             <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: CCY_COLORS.RUB }} />
             <div className="flex-1 min-w-0">
               <p className="font-medium">Рубль</p>
-              <p className="text-muted-foreground text-[10px]">RUB</p>
+              <p className="text-muted-foreground text-[11px]">RUB</p>
             </div>
             <span className="tabular-nums font-medium shrink-0">{(rubV?.pct ?? 0).toFixed(1).replace(".", ",")}%</span>
             <span className="tabular-nums text-muted-foreground shrink-0">{fmtCompact(rubV?.money ?? 0, baseCurrency)}</span>
@@ -286,7 +286,7 @@ export function AllocationChart({ components, amount, amountCcy, currencyBreakdo
             <span className="w-2.5 h-2.5 rounded-sm shrink-0 opacity-60" style={{ background: CCY_COLORS.USD }} />
             <div className="flex-1 min-w-0">
               <p className="font-medium">Валюта</p>
-              <p className="text-muted-foreground text-[10px]">{fxKeys.join(" · ") || "—"}</p>
+              <p className="text-muted-foreground text-[11px]">{fxKeys.join(" · ") || "—"}</p>
             </div>
             <span className="tabular-nums font-medium shrink-0">{valPctV.toFixed(1).replace(".", ",")}%</span>
             <span className="tabular-nums text-muted-foreground shrink-0">{fmtCompact(valMoneyV, baseCurrency)}</span>
@@ -298,10 +298,10 @@ export function AllocationChart({ components, amount, amountCcy, currencyBreakdo
               <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: CCY_COLORS[k] }} />
               <div className="flex-1 min-w-0">
                 <p className="text-muted-foreground">{CCY_NAMES[k]}</p>
-                <p className="text-muted-foreground/60 text-[10px]">{k}</p>
+                <p className="text-muted-foreground-2 text-[11px]">{k}</p>
               </div>
               <span className="tabular-nums text-muted-foreground shrink-0">{(ccyView[k]?.pct ?? 0).toFixed(1).replace(".", ",")}%</span>
-              <span className="tabular-nums text-muted-foreground/70 shrink-0">{fmtCompact(ccyView[k]?.money ?? 0, baseCurrency)}</span>
+              <span className="tabular-nums text-muted-foreground-2 shrink-0">{fmtCompact(ccyView[k]?.money ?? 0, baseCurrency)}</span>
             </div>
           ))}
         </div>

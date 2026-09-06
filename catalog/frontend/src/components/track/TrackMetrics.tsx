@@ -18,7 +18,7 @@ function StatCard({
       )}>
         {value}
       </span>
-      {sub && <p className="text-[12px] text-muted-foreground/70 mt-1 truncate">{sub}</p>}
+      {sub && <p className="text-[12px] text-muted-foreground-2 mt-1 truncate">{sub}</p>}
     </div>
   );
 }

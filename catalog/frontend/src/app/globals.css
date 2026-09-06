@@ -30,6 +30,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
+  --color-muted-foreground-2: var(--muted-foreground-2);
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
@@ -62,6 +63,9 @@
   --secondary-foreground: #1a1f2c;
   --muted: #eef0f3;
   --muted-foreground: #565d6e;
+  /* Третичный текст (подписи, сноски). Заменяет прежние text-muted-foreground/40…/70,
+     которые давали 1.6–3.3:1 — ниже порога WCAG AA. Здесь 4.6:1 на карте и на фоне. */
+  --muted-foreground-2: #69707f;
   --accent: #eef1f6;
   --accent-foreground: #2a4ba0;
   --destructive: oklch(0.55 0.20 25);
@@ -88,6 +92,29 @@
   --sidebar-accent-foreground: #2a4ba0;
   --sidebar-border: rgba(30, 41, 70, 0.10);
   --sidebar-ring: #2a4ba0;
+
+  /* Аллокация: рампа фондов (крупнейшая доля — самая тёмная) */
+  --alloc-1:  #1e2b52;
+  --alloc-2:  #26396e;
+  --alloc-3:  #2a4ba0;
+  --alloc-4:  #39599f;
+  --alloc-5:  #4b6aad;
+  --alloc-6:  #5f7cba;
+  --alloc-7:  #7791c9;
+  --alloc-8:  #92a8d6;
+  --alloc-9:  #aebde3;
+  --alloc-10: #c9d4ee;
+  /* Внешние активы — нейтральный серый, визуально отделён от синего */
+  --alloc-ext-1: #6b7280;
+  --alloc-ext-2: #7d8494;
+  --alloc-ext-3: #9098a6;
+  --alloc-ext-4: #a4abb8;
+  --alloc-ext-5: #b8becb;
+  /* Валюты */
+  --alloc-rub: #2a4ba0;
+  --alloc-usd: #4b6aad;
+  --alloc-cny: #7791c9;
+  --alloc-gld: #9aa6c8;
 }
 
 /* Strategy Asset Allocation — dark theme (deep ink, restrained steel accent) */
@@ -104,6 +131,7 @@
   --secondary-foreground: #e6e8ef;
   --muted: rgba(34, 37, 48, 0.62);
   --muted-foreground: #8a8fa1;
+  --muted-foreground-2: #9aa0b2;
   --accent: rgba(126, 151, 214, 0.14);
   --accent-foreground: #b7c5e6;
   --destructive: oklch(0.62 0.17 23);
@@ -128,6 +156,28 @@
   --sidebar-accent-foreground: #b7c5e6;
   --sidebar-border: rgba(255, 255, 255, 0.07);
   --sidebar-ring: #7e97d6;
+
+  /* Рампа развёрнута: на тёмном фоне светлые тона несут крупные доли.
+     Прежний тёмный конец (#1e2b52) давал 1.3:1 — сектор был не виден. */
+  --alloc-1:  #d6dff4;
+  --alloc-2:  #c6d1eb;
+  --alloc-3:  #b7c3e2;
+  --alloc-4:  #a7b6d9;
+  --alloc-5:  #98a8d0;
+  --alloc-6:  #889ac8;
+  --alloc-7:  #798cbf;
+  --alloc-8:  #697fb6;
+  --alloc-9:  #5a71ad;
+  --alloc-10: #4a63a4;
+  --alloc-ext-1: #c3c8d2;
+  --alloc-ext-2: #b1b6c1;
+  --alloc-ext-3: #a0a5b0;
+  --alloc-ext-4: #8e949f;
+  --alloc-ext-5: #7c828e;
+  --alloc-rub: #8fa8e0;
+  --alloc-usd: #6f8ccb;
+  --alloc-cny: #a9bce8;
+  --alloc-gld: #c2cbe6;
 }
 
 @layer base {

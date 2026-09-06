@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -12,6 +12,13 @@ import { fetchMe, isRestrictedUser } from "@/lib/api";
 import { ThemeToggle } from "./ThemeToggle";
 import { Logo, LogoMark } from "./Logo";
 import { cn } from "@/lib/utils";
+import { useModalA11y } from "@/hooks/useModalA11y";
+import {
+  getCollapsed,
+  getCollapsedServer,
+  setCollapsed as persistCollapsed,
+  subscribeCollapsed,
+} from "@/lib/sidebar-pref";
 
 type NavEntry = {
   href: string;
@@ -40,6 +47,7 @@ function NavItems({ collapsed, items, onNavigate }: { collapsed: boolean; items:
             key={href}
             href={href}
             onClick={onNavigate}
+            aria-current={pathname.startsWith(href) ? "page" : undefined}
             title={collapsed ? label : undefined}
             className={cn(
               "relative flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
@@ -58,11 +66,10 @@ function NavItems({ collapsed, items, onNavigate }: { collapsed: boolean; items:
         ) : (
           <span
             key={href}
-            aria-label={`${label} — скоро`}
-            role="presentation"
+            aria-disabled="true"
             className={cn(
               "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm",
-              "text-sidebar-foreground/40 cursor-not-allowed select-none",
+              "text-muted-foreground-2 cursor-not-allowed select-none",
               collapsed && "justify-center",
             )}
           >
@@ -70,7 +77,7 @@ function NavItems({ collapsed, items, onNavigate }: { collapsed: boolean; items:
             {!collapsed && (
               <>
                 {label}
-                <span className="ml-auto text-[9px] bg-muted text-muted-foreground/60 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                <span className="ml-auto text-[11px] bg-muted text-muted-foreground-2 px-1.5 py-0.5 rounded uppercase tracking-wider">
                   Скоро
                 </span>
               </>
@@ -84,8 +91,17 @@ function NavItems({ collapsed, items, onNavigate }: { collapsed: boolean; items:
 
 export function Sidebar() {
   const router = useRouter();
-  const [collapsed, setCollapsed] = useState(false);
+  const collapsed = useSyncExternalStore(subscribeCollapsed, getCollapsed, getCollapsedServer);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const setCollapsedPersisted = useCallback((v: boolean) => persistCollapsed(v), []);
+
+  const closeMobile = useCallback(() => setMobileOpen(false), []);
+  // Drawer — полноценный оверлей: Escape, ловушка фокуса, блок скролла фона.
+  const drawerRef = useModalA11y<HTMLElement>(mobileOpen, closeMobile, {
+    lockScroll: true,
+    trapFocus: true,
+  });
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
   // While `me` is loading, hide restricted items — brief flash for admins beats
   // showing managers a section they can't open.
@@ -115,7 +131,7 @@ export function Sidebar() {
           {collapsed ? (
             <button
               type="button"
-              onClick={() => setCollapsed(false)}
+              onClick={() => setCollapsedPersisted(false)}
               aria-label="Развернуть меню"
               className="group mx-auto relative"
             >
@@ -128,7 +144,7 @@ export function Sidebar() {
               <ThemeToggle />
               <button
                 type="button"
-                onClick={() => setCollapsed(true)}
+                onClick={() => setCollapsedPersisted(true)}
                 aria-label="Свернуть меню"
                 className="p-1.5 rounded-md hover:bg-sidebar-accent/50 text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors"
               >
@@ -149,7 +165,7 @@ export function Sidebar() {
             </div>
           )}
           {!collapsed && me?.email && (
-            <p className="px-3 py-1 text-[11px] text-sidebar-foreground/40 truncate">{me.email}</p>
+            <p className="px-3 py-1 text-[11px] text-muted-foreground-2 truncate">{me.email}</p>
           )}
           <button
             type="button"
@@ -174,8 +190,10 @@ export function Sidebar() {
           <button
             type="button"
             onClick={() => setMobileOpen((o) => !o)}
-            aria-label="Открыть меню"
-            className="p-1.5 rounded-md hover:bg-sidebar-accent/50 text-sidebar-foreground"
+            aria-label={mobileOpen ? "Закрыть меню" : "Открыть меню"}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-nav"
+            className="grid place-items-center min-h-11 min-w-11 -ml-2 rounded-md hover:bg-sidebar-accent/50 text-sidebar-foreground"
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -189,13 +207,19 @@ export function Sidebar() {
         {mobileOpen && (
           <div
             className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-            onClick={() => setMobileOpen(false)}
+            onClick={closeMobile}
             aria-hidden="true"
           />
         )}
 
         {/* Drawer */}
-        <aside className={cn(
+        <aside
+          id="mobile-nav"
+          ref={drawerRef}
+          tabIndex={-1}
+          aria-label="Основная навигация"
+          inert={!mobileOpen}
+          className={cn(
           "fixed top-0 left-0 bottom-0 z-50 w-64 flex flex-col",
           "bg-sidebar border-r border-sidebar-border backdrop-blur-xl",
           "transition-transform duration-200 ease-in-out",
@@ -205,9 +229,9 @@ export function Sidebar() {
             <Logo className="flex-1 min-w-0" />
             <button
               type="button"
-              onClick={() => setMobileOpen(false)}
+              onClick={closeMobile}
               aria-label="Закрыть меню"
-              className="p-1.5 rounded-md hover:bg-sidebar-accent/50 text-sidebar-foreground"
+              className="grid place-items-center min-h-11 min-w-11 rounded-md hover:bg-sidebar-accent/50 text-sidebar-foreground"
             >
               <X className="w-4 h-4" />
             </button>
@@ -219,7 +243,7 @@ export function Sidebar() {
 
           <div className="border-t border-sidebar-border p-2">
             {me?.email && (
-              <p className="px-3 py-1 text-[11px] text-sidebar-foreground/40 truncate">{me.email}</p>
+              <p className="px-3 py-1 text-[11px] text-muted-foreground-2 truncate">{me.email}</p>
             )}
             <button
               type="button"

@@ -66,7 +66,7 @@ export function UsersTab() {
                 </td>
                 <td className="px-4 py-3">
                   <span className={cn(
-                    "text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded",
+                    "text-[11px] uppercase tracking-wider px-1.5 py-0.5 rounded",
                     u.is_active ? "bg-[var(--pos)]/12 text-[var(--pos)]" : "bg-destructive/10 text-destructive",
                   )}>
                     {u.is_active ? "Активен" : "Заблокирован"}

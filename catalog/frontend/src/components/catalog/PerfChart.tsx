@@ -41,7 +41,7 @@ interface Props {
 export function PerfChart({ dates, points, benchPoints, benchLabel, tone = "neutral", height = 300 }: Props) {
   if (!points || points.length < 2 || !dates || dates.length !== points.length) {
     return (
-      <div style={{ height }} className="flex items-center justify-center text-sm text-muted-foreground/50">
+      <div style={{ height }} className="flex items-center justify-center text-sm text-muted-foreground-2">
         нет данных для графика
       </div>
     );

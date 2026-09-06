@@ -20,7 +20,7 @@ const PERIOD_ORDER = ["1m", "3m", "6m", "1y", "3y", "ytd", "inception"];
 const MONTH_LABELS = ["Янв", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"];
 
 function PctCell({ v }: { v: number | null | undefined }) {
-  if (v == null) return <span className="text-muted-foreground/40">—</span>;
+  if (v == null) return <span className="text-muted-foreground-2">—</span>;
   return (
     <span
       className={cn(
@@ -37,7 +37,7 @@ function PctCell({ v }: { v: number | null | undefined }) {
 /** Heatmap cell: background tint scaled by magnitude relative to the period's max move. */
 function HeatCell({ v, maxAbs, bold }: { v: number | null | undefined; maxAbs: number; bold?: boolean }) {
   if (v == null) {
-    return <td className="px-2 py-1.5 text-right text-muted-foreground/30">—</td>;
+    return <td className="px-2 py-1.5 text-right text-muted-foreground-2">—</td>;
   }
   const intensity = maxAbs > 0 ? Math.min(1, Math.abs(v) / maxAbs) : 0;
   const pct = Math.round((0.06 + intensity * 0.40) * 100);
@@ -105,7 +105,7 @@ export function PerformanceTables({ fundKey }: { fundKey: string }) {
           </h3>
           <div className="rounded-xl border border-border overflow-x-auto">
             <table className="w-full min-w-[560px] text-sm">
-              <thead className="bg-muted/50 text-[10px] uppercase tracking-[0.1em]">
+              <thead className="bg-muted/50 text-[11px] uppercase tracking-[0.1em]">
                 <tr>
                   <th className="px-3 py-2 text-left">Доходность</th>
                   {availablePeriods.map((p) => (
@@ -144,7 +144,7 @@ export function PerformanceTables({ fundKey }: { fundKey: string }) {
           </h3>
           <div className="rounded-xl border border-border overflow-x-auto">
             <table className="w-full min-w-[720px] text-xs">
-              <thead className="bg-muted/50 text-[10px] uppercase tracking-[0.1em]">
+              <thead className="bg-muted/50 text-[11px] uppercase tracking-[0.1em]">
                 <tr>
                   <th className="px-2 py-2 text-left sticky left-0 bg-muted/50 z-10">Год</th>
                   {MONTH_LABELS.map((m) => (

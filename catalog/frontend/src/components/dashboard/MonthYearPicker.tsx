@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { useModalA11y } from "@/hooks/useModalA11y";
 
 const MONTHS = ["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
 
@@ -39,13 +40,18 @@ export function MonthYearPicker({ value, onChange, availableDates, monthAnchor =
   const triggerRef = useRef<HTMLButtonElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const closeDropdown = () => {
+  const closeDropdown = useCallback(() => {
     setClosing(true);
     closeTimerRef.current = setTimeout(() => {
       setClosing(false);
       setOpen(false);
     }, 150);
-  };
+  }, []);
+
+  // Escape закрывает, Tab не уходит мимо сетки месяцев, фокус возвращается на триггер.
+  const popoverRef = useModalA11y<HTMLDivElement>(open && !closing, closeDropdown, {
+    trapFocus: true,
+  });
 
   useEffect(() => {
     return () => { if (closeTimerRef.current) clearTimeout(closeTimerRef.current); };
@@ -96,6 +102,9 @@ export function MonthYearPicker({ value, onChange, availableDates, monthAnchor =
       <button type="button"
         ref={triggerRef}
         onClick={handleOpen}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={`Период: ${label}. Выбрать месяц и год`}
         className={cn(
           "px-3 py-1.5 text-sm font-medium border border-input rounded-lg bg-background",
           "hover:bg-muted transition-colors focus:outline-none focus:ring-1 focus:ring-primary",
@@ -108,21 +117,28 @@ export function MonthYearPicker({ value, onChange, availableDates, monthAnchor =
 
       {/* Popover */}
       {(open || closing) && (
-        <div className={cn(
+        <div
+          ref={popoverRef}
+          role="dialog"
+          aria-label="Выбор месяца и года"
+          className={cn(
           "t-dropdown absolute top-full mt-2 z-50 w-56",
           "bg-popover border border-border rounded-xl shadow-xl overflow-hidden",
           origin === "top-right" && "right-0",
           open && !closing && "is-open",
           closing && "is-closing",
-        )} data-origin={origin}>
+          )}
+          data-origin={origin}
+        >
           {/* Year selector */}
           <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
             <button type="button"
               onClick={prevYear}
               disabled={isFirst}
+              aria-label="Предыдущий год"
               className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-muted-foreground hover:text-foreground"
             >
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <svg aria-hidden="true" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path d="M15 18l-6-6 6-6" />
               </svg>
             </button>
@@ -130,9 +146,10 @@ export function MonthYearPicker({ value, onChange, availableDates, monthAnchor =
             <button type="button"
               onClick={nextYear}
               disabled={isLast}
+              aria-label="Следующий год"
               className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-muted-foreground hover:text-foreground"
             >
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <svg aria-hidden="true" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path d="M9 18l6-6-6-6" />
               </svg>
             </button>
@@ -150,6 +167,8 @@ export function MonthYearPicker({ value, onChange, availableDates, monthAnchor =
                   key={m}
                   onClick={() => selectMonth(m)}
                   disabled={!available}
+                  aria-current={selected ? "true" : undefined}
+                  aria-label={`${name} ${viewYear}`}
                   className={cn(
                     "py-1.5 text-sm rounded-lg transition-colors font-medium",
                     selected

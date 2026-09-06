@@ -113,11 +113,11 @@ export function QuotesEditor({ fundKey, ccy }: Props) {
       {/* Preview */}
       {quotes.length >= 2 && (
         <div className="rounded-md border border-border p-3">
-          <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground mb-2">
+          <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground mb-2">
             Превью (rebased 100)
           </div>
           <Sparkline points={series} width={600} height={80} tone="up" className="w-full" />
-          <div className="mt-1 flex justify-between text-[10px] text-muted-foreground tabular-nums">
+          <div className="mt-1 flex justify-between text-[11px] text-muted-foreground tabular-nums">
             <span>{quotes[0].date}</span>
             <span>{quotes[quotes.length - 1].date}</span>
           </div>
@@ -129,7 +129,7 @@ export function QuotesEditor({ fundKey, ccy }: Props) {
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm">
             <div className="font-medium">Загрузить CSV</div>
-            <div className="text-[10px] text-muted-foreground">
+            <div className="text-[11px] text-muted-foreground">
               колонки: <code>date,price_rub,price_native</code> (последняя опциональна)
             </div>
           </div>
@@ -145,10 +145,10 @@ export function QuotesEditor({ fundKey, ccy }: Props) {
         {bulkResult && (
           <div className="text-xs space-y-1">
             <div>
-              ✅ inserted={bulkResult.inserted} · updated={bulkResult.updated} · skipped={bulkResult.skipped}
+              inserted={bulkResult.inserted} · updated={bulkResult.updated} · skipped={bulkResult.skipped}
             </div>
             {bulkResult.errors.length > 0 && (
-              <details className="text-rose-700">
+              <details className="text-destructive">
                 <summary className="cursor-pointer">
                   <AlertTriangle className="inline h-3 w-3 mr-1" /> {bulkResult.errors.length} ошибок
                 </summary>
@@ -163,7 +163,7 @@ export function QuotesEditor({ fundKey, ccy }: Props) {
 
       {/* Add row */}
       <div className="rounded-md border border-border p-3">
-        <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground mb-2">
+        <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground mb-2">
           Добавить точку
         </div>
         <div className="flex items-end gap-2">
@@ -229,7 +229,7 @@ export function QuotesEditor({ fundKey, ccy }: Props) {
             </tbody>
           </table>
           {quotes.length > 100 && (
-            <div className="px-3 py-2 text-[10px] text-muted-foreground border-t border-border">
+            <div className="px-3 py-2 text-[11px] text-muted-foreground border-t border-border">
               Показаны последние 100 из {quotes.length}. Для массового изменения — CSV-upload.
             </div>
           )}
@@ -282,7 +282,7 @@ function QuoteRow({
         {editing ? (
           <input type="number" step="0.0001" value={priceNative} onChange={(e) => setPriceNative(e.target.value)} className={cn(inputCls, "text-right")} />
         ) : (
-          <span onDoubleClick={() => setEditing(true)} className={q.price_native == null ? "text-muted-foreground/50" : ""}>
+          <span onDoubleClick={() => setEditing(true)} className={q.price_native == null ? "text-muted-foreground-2" : ""}>
             {q.price_native?.toFixed(4) ?? "—"}
           </span>
         )}
@@ -290,11 +290,11 @@ function QuoteRow({
       <td className="px-3 py-1.5">
         {editing ? (
           <div className="flex gap-1">
-            <button type="button" onClick={save} className="text-emerald-600 hover:underline text-[10px]">save</button>
-            <button type="button" onClick={() => setEditing(false)} className="text-muted-foreground hover:underline text-[10px]">cancel</button>
+            <button type="button" onClick={save} className="text-emerald-600 hover:underline text-[11px]">save</button>
+            <button type="button" onClick={() => setEditing(false)} className="text-muted-foreground hover:underline text-[11px]">cancel</button>
           </div>
         ) : (
-          <button type="button" onClick={onDelete} className="text-muted-foreground hover:text-rose-600">
+          <button type="button" onClick={onDelete} className="text-muted-foreground hover:text-destructive">
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         )}

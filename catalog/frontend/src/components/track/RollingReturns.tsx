@@ -236,7 +236,7 @@ export function RollingReturns({ series, window: win }: Props) {
         </ComposedChart>
       </ResponsiveContainer>
 
-      <p className="text-[11px] text-muted-foreground/70 mt-2">
+      <p className="text-[11px] text-muted-foreground-2 mt-2">
         Ось X совпадает с графиком выше: столбец под точкой трека — результат входа в этот месяц.{" "}
         {horizon === "period"
           ? "Выход у всех окон общий — последняя точка выбранного периода."

@@ -42,7 +42,7 @@ export function Sparkline({
     return (
       <div
         style={{ width, height }}
-        className={cn("text-muted-foreground/40 text-[10px] leading-none", className)}
+        className={cn("text-muted-foreground-2 text-[11px] leading-none", className)}
       >
         нет данных
       </div>

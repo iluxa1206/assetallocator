@@ -79,7 +79,7 @@ const METRIC_HINTS: Record<string, string> = {
 
 function CcyBadge({ ccy }: { ccy: string }) {
   return (
-    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wider border border-border text-muted-foreground">
+    <span className="px-1.5 py-0.5 rounded text-[11px] font-semibold tracking-wider border border-border text-muted-foreground">
       {ccy}
     </span>
   );
@@ -88,7 +88,7 @@ function CcyBadge({ ccy }: { ccy: string }) {
 function RiskDots({ score }: { score: number | null }) {
   if (!score) return null;
   return (
-    <div className="flex gap-[3px]" title={`Риск: ${score} из 5`}>
+    <div className="flex gap-[3px]" role="img" aria-label={`Уровень риска ${score} из 5`} title={`Риск: ${score} из 5`}>
       {[1, 2, 3, 4, 5].map((i) => (
         <span
           key={i}
@@ -118,7 +118,7 @@ function MetricCell({
       <div
         title={METRIC_HINTS[label]}
         className={cn(
-          "text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground/70 leading-none mb-0.5 truncate",
+          "text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground-2 leading-none mb-0.5 truncate",
           METRIC_HINTS[label] && "cursor-help",
         )}
       >
@@ -159,8 +159,8 @@ function FundCard({
       href={`/catalog/funds/${fund.key}`}
       className={cn(
         "group relative flex flex-col rounded-2xl glossy h-full",
-        "cursor-pointer overflow-hidden transition-all duration-300 backdrop-blur-xl",
-        "hover:-translate-y-1 hover:shadow-[0_18px_44px_-14px_rgba(40,50,110,0.30)]",
+        "cursor-pointer overflow-hidden transition-all duration-200 backdrop-blur-xl",
+        "hover:-translate-y-0.5 hover:shadow-[0_18px_44px_-14px_rgba(40,50,110,0.30)]",
       )}
     >
       <div className="relative flex flex-col flex-1 p-5">
@@ -171,7 +171,7 @@ function FundCard({
               <Icon className={cn("h-3 w-3", catStyle.iconText)} strokeWidth={2.2} />
             </div>
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-[10px] text-muted-foreground truncate">
+              <span className="text-[11px] text-muted-foreground truncate">
                 {fund.contract_type ?? "—"}
               </span>
               <CcyBadge ccy={fund.native_currency} />
@@ -191,13 +191,13 @@ function FundCard({
             <div className="flex gap-3 flex-1 min-h-0 mb-3">
               {/* Return column */}
               <div className="w-[130px] shrink-0 flex flex-col">
-                <div className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground/70 mb-1">
+                <div className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground-2 mb-1">
                   {retLabel}
                 </div>
                 <div
                   className={cn(
                     "text-[2rem] font-extrabold tabular-nums tracking-tight leading-none mb-1",
-                    ret === null && "text-muted-foreground/40",
+                    ret === null && "text-muted-foreground-2",
                     ret !== null && ret >= 0 && "text-[var(--pos)]",
                     ret !== null && ret < 0 && "text-[var(--neg)]",
                   )}
@@ -214,7 +214,7 @@ function FundCard({
                     >
                       {fmtPct(delta, 2)}
                     </span>
-                    <span className="text-muted-foreground/50 font-normal">
+                    <span className="text-muted-foreground-2 font-normal">
                       {" "}vs {series?.bench_label ?? "—"}
                     </span>
                   </div>
@@ -235,7 +235,7 @@ function FundCard({
             </div>
 
             {/* Metrics strip — grouped: доходность | риск | бенч */}
-            <div className="border-t border-border/60 pt-3 grid grid-cols-6 gap-1">
+            <div className="border-t border-border/60 pt-3 grid grid-cols-3 gap-y-3 gap-x-1 sm:grid-cols-6 sm:gap-y-0">
               <MetricCell label="CAGR" value={fmtPct(series?.cagr ?? null, 2)} valueClass={series?.cagr != null && series.cagr >= 0 ? "text-[var(--pos)]" : series?.cagr != null ? "text-[var(--neg)]" : ""} />
               <MetricCell label="Волат." value={fmtPctSimple(series?.vol ?? null, 2)} />
               <MetricCell label="Sharpe" value={fmtNum(series?.sharpe)} />
@@ -248,7 +248,7 @@ function FundCard({
               <MetricCell label="Бенч." value={fmtPct(benchRet, 2)} divider />
             </div>
             {asOf && (
-              <div className="text-[9px] text-muted-foreground/50 text-right mt-2 tabular-nums">
+              <div className="text-[11px] text-muted-foreground-2 text-right mt-2 tabular-nums">
                 данные на {asOf}
               </div>
             )}
@@ -380,7 +380,7 @@ function FundTable({
                   <td className="py-3 px-3">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="font-medium truncate">{f.short_name ?? f.name}</span>
-                      <span className="text-[10px] text-muted-foreground shrink-0">{f.key}</span>
+                      <span className="text-[11px] text-muted-foreground shrink-0">{f.key}</span>
                       <CcyBadge ccy={f.native_currency} />
                     </div>
                   </td>
@@ -461,7 +461,7 @@ export default function CatalogPage() {
   }
 
   if (isError || !funds) {
-    return <div className="text-destructive text-sm">Не удалось загрузить фонды</div>;
+    return <div role="alert" className="text-destructive text-sm">Не удалось загрузить фонды</div>;
   }
 
   const q = search.trim().toLowerCase();
@@ -504,7 +504,7 @@ export default function CatalogPage() {
       {/* Search + sort + view row */}
       <div className="flex flex-wrap items-center gap-3 justify-between">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" strokeWidth={2} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground-2" strokeWidth={2} />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -580,8 +580,8 @@ export default function CatalogPage() {
                 {count > 0 && (
                   <span
                     className={cn(
-                      "text-[10px] tabular-nums leading-none",
-                      active ? "text-primary-foreground/70" : "text-muted-foreground/50",
+                      "text-[11px] tabular-nums leading-none",
+                      active ? "text-primary-foreground/70" : "text-muted-foreground-2",
                     )}
                   >
                     {count}
@@ -613,7 +613,7 @@ export default function CatalogPage() {
       {/* ── Empty state ── */}
       {activeFunds.length === 0 && (
         <div className="glossy rounded-xl py-16 text-center">
-          <Search className="w-7 h-7 mx-auto text-muted-foreground/40 mb-3" strokeWidth={1.5} />
+          <Search className="w-7 h-7 mx-auto text-muted-foreground-2 mb-3" strokeWidth={1.5} />
           <p className="text-sm font-medium">Ничего не найдено</p>
           <p className="text-xs text-muted-foreground mt-1">
             По запросу «{search}» фондов нет. Измените запрос или сбросьте поиск.
@@ -652,7 +652,7 @@ export default function CatalogPage() {
                     {meta.label}
                   </span>
                   <div className="h-px flex-1 bg-border/60" />
-                  <span className="text-xs text-muted-foreground/60 tabular-nums">
+                  <span className="text-xs text-muted-foreground-2 tabular-nums">
                     {count} фонд{count === 1 ? "" : count < 5 ? "а" : "ов"}
                   </span>
                 </div>

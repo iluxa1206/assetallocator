@@ -119,7 +119,7 @@ export function DrawdownBars({ series, window: win }: Props) {
         </ComposedChart>
       </ResponsiveContainer>
 
-      <p className="text-[11px] text-muted-foreground/70 mt-2">
+      <p className="text-[11px] text-muted-foreground-2 mt-2">
         Ось X совпадает с графиком выше: пик пересчитывается на старте выбранного периода.
       </p>
     </div>

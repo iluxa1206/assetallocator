@@ -37,9 +37,9 @@ const COLS: { key: SortKey; label: string; hint: string }[] = [
 
 function KindBadge({ kind }: { kind: CompetitorRow["kind"] }) {
   if (kind === "own")
-    return <span className="text-[9px] uppercase tracking-wider bg-primary/15 text-primary px-1.5 py-0.5 rounded">Наш</span>;
+    return <span className="text-[11px] uppercase tracking-wider bg-primary/15 text-primary px-1.5 py-0.5 rounded">Наш</span>;
   if (kind === "benchmark")
-    return <span className="text-[9px] uppercase tracking-wider bg-muted text-muted-foreground px-1.5 py-0.5 rounded">Индекс</span>;
+    return <span className="text-[11px] uppercase tracking-wider bg-muted text-muted-foreground px-1.5 py-0.5 rounded">Индекс</span>;
   return null;
 }
 
@@ -181,7 +181,7 @@ export default function CompetitorsPage() {
           ))}
         </div>
       )}
-      {isError && <div className="text-destructive text-sm">Не удалось загрузить рейтинг</div>}
+      {isError && <div role="alert" className="text-destructive text-sm">Не удалось загрузить рейтинг</div>}
 
       {rows && !isLoading && (
         <>

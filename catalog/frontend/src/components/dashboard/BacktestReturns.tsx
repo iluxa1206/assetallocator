@@ -23,7 +23,7 @@ type LineKey = "portfolio" | "benchmark" | "cpi" | "deposit";
 /** Heatmap cell: background tint scaled by magnitude relative to the grid's max move. */
 function HeatCell({ v, maxAbs, bold }: { v: number | null; maxAbs: number; bold?: boolean }) {
   if (v == null) {
-    return <td className="px-2 py-1.5 text-right text-muted-foreground/30">—</td>;
+    return <td className="px-2 py-1.5 text-right text-muted-foreground-2">—</td>;
   }
   const intensity = maxAbs > 0 ? Math.min(1, Math.abs(v) / maxAbs) : 0;
   const pct = Math.round((0.06 + intensity * 0.4) * 100);
@@ -145,7 +145,7 @@ export function BacktestReturns({
                       "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors",
                       active
                         ? "border-border bg-muted/50 text-foreground"
-                        : "border-transparent text-muted-foreground/55 hover:text-foreground hover:bg-muted/30",
+                        : "border-transparent text-muted-foreground-2 hover:text-foreground hover:bg-muted/30",
                     )}
                   >
                     <span className="h-[3px] w-4 rounded-full shrink-0" style={{ background: l.color, opacity: active ? 1 : 0.4 }} />
@@ -159,7 +159,7 @@ export function BacktestReturns({
           {/* Monthly heatmap grid */}
           <div className="rounded-xl border border-border overflow-x-auto">
             <table className="w-full min-w-[720px] text-xs">
-              <thead className="bg-muted/50 text-[10px] uppercase tracking-[0.1em]">
+              <thead className="bg-muted/50 text-[11px] uppercase tracking-[0.1em]">
                 <tr>
                   <th className="px-2 py-2 text-left sticky left-0 bg-muted/50 z-10">Год</th>
                   {MONTH_LABELS.map((m) => (
