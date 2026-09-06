@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTabsPill } from "@/hooks/useTabsPill";
 import { MonthYearPicker } from "@/components/dashboard/MonthYearPicker";
@@ -32,8 +33,14 @@ function ToggleChip({ active, onClick, children }: { active: boolean; onClick: (
           : "border-border bg-muted/40 text-muted-foreground hover:text-foreground",
       )}
     >
-      <span className={cn("grid h-3 w-3 place-items-center rounded-[3px] border text-[9px] leading-none", active ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/50")}>
-        {active ? "✓" : ""}
+      <span
+        aria-hidden="true"
+        className={cn(
+          "grid h-3.5 w-3.5 shrink-0 place-items-center rounded-[3px] border",
+          active ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground-2",
+        )}
+      >
+        {active && <Check className="h-2.5 w-2.5" strokeWidth={3} />}
       </span>
       {children}
     </button>
@@ -177,7 +184,7 @@ function TrackSection({ series }: { series: TrackSeries }) {
 
       {metrics && <TrackMetricsGrid m={metrics} />}
 
-      <p className="text-[11px] text-muted-foreground/70">
+      <p className="text-[11px] text-muted-foreground-2">
         Трек: {series.duLabel} с {fmtDateRu(firstDate)}, с {fmtDateRu(series.transitionDate)} — {series.fundLabel}.
         Ряд месячный, индекс накопленной доходности; старт выбранного периода принят за 100.
       </p>

@@ -33,7 +33,7 @@ function AmountInput({ value, onChange }: { value: number; onChange: (v: number)
     <input
       type="text"
       inputMode="numeric"
-      className="text-[1.75rem] font-extrabold tracking-tight bg-transparent outline-none w-full tabular-nums"
+      className="text-[1.75rem] font-extrabold tracking-tight bg-transparent w-full tabular-nums rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
       value={editing ? raw : fmt}
       onFocus={(e) => { setEditing(true); setRaw(value.toString()); e.target.select(); }}
       onBlur={() => setEditing(false)}
@@ -59,8 +59,8 @@ export function SetupGrid() {
         {/* Card 1: Amount */}
         <div className="glossy rounded-2xl p-5">
           <StepHeader n={1} title="Сумма инвестиций" />
-          <div className="border border-input rounded-xl px-4 py-3 mb-3 flex items-center gap-2 focus-within:ring-2 focus-within:ring-primary/40 transition-shadow">
-            <span className="text-xl font-bold text-muted-foreground/70">{CCY_SYM[s.amount_ccy]}</span>
+          <div className="border border-input rounded-xl px-4 py-3 mb-3 flex items-center gap-2 focus-within:ring-2 focus-within:ring-ring/60 transition-shadow">
+            <span className="text-xl font-bold text-muted-foreground-2">{CCY_SYM[s.amount_ccy]}</span>
             <AmountInput value={s.amount} onChange={(v) => s.set({ amount: v })} />
           </div>
           <div className="flex gap-2">
@@ -84,7 +84,7 @@ export function SetupGrid() {
         {/* Card 2: Risk profile */}
         <div className="relative">
           {s.manual && (
-            <p className="absolute top-3 right-4 z-10 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <p className="absolute top-3 right-4 z-10 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
               ручной режим
             </p>
           )}

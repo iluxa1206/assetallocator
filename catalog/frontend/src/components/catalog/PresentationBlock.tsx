@@ -102,7 +102,7 @@ export function PresentationBlock({
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
-          {error && <span className="text-xs text-destructive">{error}</span>}
+          {error && <span role="alert" className="text-xs text-destructive">{error}</span>}
         </>
       )}
     </div>

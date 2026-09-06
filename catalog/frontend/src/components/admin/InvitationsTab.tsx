@@ -152,7 +152,7 @@ export function InvitationsTab() {
                 <td className="px-4 py-3 text-muted-foreground">{ROLE_LABEL[inv.role] ?? inv.role}</td>
                 <td className="px-4 py-3 text-muted-foreground">{inv.is_reset ? "Сброс пароля" : "Регистрация"}</td>
                 <td className="px-4 py-3">
-                  <span className={cn("text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded", STATUS_META[inv.status].cls)}>
+                  <span className={cn("text-[11px] uppercase tracking-wider px-1.5 py-0.5 rounded", STATUS_META[inv.status].cls)}>
                     {STATUS_META[inv.status].label}
                   </span>
                 </td>

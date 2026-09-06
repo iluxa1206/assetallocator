@@ -106,7 +106,7 @@ export function ManualPanel() {
                         const n = parseFloat(e.target.value.replace(",", "."));
                         setFund(k, n);
                       }}
-                      className="w-full bg-transparent outline-none text-sm tabular-nums text-right"
+                      className="w-full bg-transparent text-sm tabular-nums text-right rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
                     />
                     <span className="text-xs text-muted-foreground ml-1">%</span>
                   </div>
@@ -152,7 +152,7 @@ export function ManualPanel() {
                       value={v.toFixed(1)}
                       readOnly
                       tabIndex={-1}
-                      className="w-full bg-transparent outline-none text-sm tabular-nums text-right text-muted-foreground"
+                      className="w-full bg-transparent text-sm tabular-nums text-right text-muted-foreground rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
                     />
                     <span className="text-xs text-muted-foreground ml-1">%</span>
                   </div>

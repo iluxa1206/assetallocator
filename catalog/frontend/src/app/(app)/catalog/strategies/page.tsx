@@ -37,7 +37,7 @@ function CcyAllocBar({ comp, funds }: { comp: Record<string, number>; funds: Fun
   const rubPct = (rub / total) * 100;
   return (
     <div>
-      <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.12em] text-muted-foreground mb-1.5">
+      <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.12em] text-muted-foreground mb-1.5">
         <span>Валютная аллокация</span>
         <span className="tabular-nums">
           {Math.round(rubPct)}% / {Math.round(100 - rubPct)}%
@@ -47,7 +47,7 @@ function CcyAllocBar({ comp, funds }: { comp: Record<string, number>; funds: Fun
         <div className="bg-primary" style={{ width: `${rubPct}%` }} />
         <div className="bg-foreground/25" style={{ width: `${100 - rubPct}%` }} />
       </div>
-      <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
+      <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1">
           <span className="h-1.5 w-1.5 rounded-full bg-primary" /> ₽ RUB
         </span>
@@ -69,12 +69,12 @@ function StrategyHeroCard({ s, funds }: { s: Strategy; funds: Fund[] | undefined
       href={`/catalog/strategies/${s.code}`}
       className={cn(
         "group relative flex flex-col aspect-[4/3] glossy rounded-lg p-4 overflow-hidden",
-        "transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_44px_-14px_rgba(14,20,40,0.28)]",
+        "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_44px_-14px_rgba(14,20,40,0.28)]",
       )}
     >
       <span className={cn("absolute left-0 top-0 bottom-0 w-[3px]", meta.accent)} />
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.1em] text-muted-foreground min-w-0">
+        <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.1em] text-muted-foreground min-w-0">
           <Icon className="h-3 w-3 shrink-0" strokeWidth={2} />
           <span className="truncate">{meta.label}</span>
           {s.ccy_strategy !== "none" && (
@@ -86,7 +86,7 @@ function StrategyHeroCard({ s, funds }: { s: Strategy; funds: Fund[] | undefined
         </div>
         <div className="text-right shrink-0">
           <div className="text-2xl font-bold tabular-nums leading-none">{nFunds}</div>
-          <div className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground mt-0.5">фондов</div>
+          <div className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground mt-0.5">фондов</div>
         </div>
       </div>
 
@@ -126,7 +126,7 @@ export default function StrategiesListPage() {
       ))}
     </div>
   );
-  if (isError || !data) return <div className="text-destructive text-sm">Не удалось загрузить стратегии</div>;
+  if (isError || !data) return <div role="alert" className="text-destructive text-sm">Не удалось загрузить стратегии</div>;
 
   const groups = new Map<string, Strategy[]>();
   for (const s of data) {
@@ -157,7 +157,7 @@ export default function StrategiesListPage() {
               <Icon className="h-3.5 w-3.5" strokeWidth={2.2} />
               {meta.label}
               <span className="text-border">·</span>
-              <span className="text-muted-foreground/60 normal-case tracking-normal">
+              <span className="text-muted-foreground-2 normal-case tracking-normal">
                 {groups.get(rp)!.length} стратеги{groups.get(rp)!.length === 1 ? "я" : groups.get(rp)!.length < 5 ? "и" : "й"}
               </span>
             </div>

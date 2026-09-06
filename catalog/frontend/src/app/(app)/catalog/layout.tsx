@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
+
+export const metadata: Metadata = {
+  title: "Каталог фондов",
+  description: "10 фондов: акции, облигации, хедж, ликвидность",
+};
 
 export default function CatalogLayout({ children }: { children: ReactNode }) {
   return (

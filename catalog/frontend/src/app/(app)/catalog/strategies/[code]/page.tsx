@@ -79,7 +79,7 @@ export default function StrategyDetailPage({ params }: { params: Promise<{ code:
       </div>
     </div>
   );
-  if (isError || !s) return <div className="text-destructive text-sm">Не удалось загрузить стратегию</div>;
+  if (isError || !s) return <div role="alert" className="text-destructive text-sm">Не удалось загрузить стратегию</div>;
 
   const meta = RISK_META[s.risk_profile] ?? RISK_META.base;
   const Icon = meta.Icon;
@@ -161,7 +161,7 @@ export default function StrategyDetailPage({ params }: { params: Promise<{ code:
                 <div
                   className={cn(
                     "text-[3.25rem] md:text-[4rem] font-extrabold tabular-nums tracking-tight leading-none",
-                    pRet === null && "text-muted-foreground/40",
+                    pRet === null && "text-muted-foreground-2",
                     pRet !== null && pRet >= 0 && "text-[var(--pos)]",
                     pRet !== null && pRet < 0 && "text-[var(--neg)]",
                   )}
@@ -228,7 +228,7 @@ export default function StrategyDetailPage({ params }: { params: Promise<{ code:
 
       {/* Currency split hero strip */}
       <div className="glossy rounded-lg p-5">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           Валютная аллокация
         </div>
         <div className="mt-3 flex items-end gap-4">
@@ -251,7 +251,7 @@ export default function StrategyDetailPage({ params }: { params: Promise<{ code:
             </div>
           </div>
           <div className="text-right shrink-0">
-            <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Фондов</div>
+            <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Фондов</div>
             <div className="text-3xl font-bold tabular-nums leading-none mt-1">{entries.length}</div>
           </div>
         </div>
@@ -259,7 +259,7 @@ export default function StrategyDetailPage({ params }: { params: Promise<{ code:
 
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
         <aside className="glossy rounded-lg p-4">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-2">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-2">
             Параметры
           </div>
           <KV label="Риск-профиль" value={meta.label} />
@@ -291,7 +291,7 @@ export default function StrategyDetailPage({ params }: { params: Promise<{ code:
             </h3>
             <div className="glossy rounded-lg overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-[10px] uppercase tracking-[0.1em]">
+                <thead className="bg-muted/50 text-[11px] uppercase tracking-[0.1em]">
                   <tr>
                     <th className="px-3 py-2.5 text-left">Фонд</th>
                     <th className="px-3 py-2.5 text-left">Валюта</th>
@@ -312,7 +312,7 @@ export default function StrategyDetailPage({ params }: { params: Promise<{ code:
                           <span className="text-muted-foreground ml-1.5 text-xs">({k})</span>
                         </td>
                         <td className="px-3 py-2.5">
-                          <span className="text-[10px] font-semibold tracking-wider px-1.5 py-0.5 rounded border border-border text-muted-foreground">
+                          <span className="text-[11px] font-semibold tracking-wider px-1.5 py-0.5 rounded border border-border text-muted-foreground">
                             {ccy}
                           </span>
                         </td>

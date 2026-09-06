@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toSvg } from "html-to-image";
 import { Check, Copy, Download, FileText, Printer, X } from "lucide-react";
 import type { PortfolioResponse } from "@/lib/types";
 import { PortfolioReport, type ReportParams } from "./PortfolioReport";
 import { buildEmailHtml, buildEmailText } from "./reportEmail";
+import { useModalA11y } from "@/hooks/useModalA11y";
 
 /**
  * Экспорт рекомендации: модалка с предпросмотром чистого отчёта.
@@ -62,16 +63,12 @@ export function ExportDialog({
   const [copyFailed, setCopyFailed] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
+  // Escape, блок скролла, ловушка фокуса и возврат фокуса на кнопку-триггер.
+  const dialogRef = useModalA11y<HTMLDivElement>(open, close, {
+    lockScroll: true,
+    trapFocus: true,
+  });
 
   async function exportPng() {
     const node = reportRef.current;
@@ -162,9 +159,15 @@ export function ExportDialog({
 
       {open &&
         createPortal(
-          <div className="fixed inset-0 z-[100] flex flex-col" role="dialog" aria-modal="true">
+          <div
+            ref={dialogRef}
+            className="fixed inset-0 z-[100] flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Отчёт по портфелю для клиента"
+          >
             {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={() => setOpen(false)} aria-hidden="true" />
+            <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={close} aria-hidden="true" />
 
             {/* Toolbar */}
             <div className="relative z-10 flex items-center justify-center gap-2 px-4 py-3 flex-wrap" data-noexport>
@@ -182,9 +185,9 @@ export function ExportDialog({
               </button>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
-                aria-label="Закрыть"
-                className="absolute right-4 p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                onClick={close}
+                aria-label="Закрыть отчёт"
+                className="ml-auto sm:absolute sm:right-4 grid place-items-center min-h-11 min-w-11 rounded-lg text-white hover:bg-white/15 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>

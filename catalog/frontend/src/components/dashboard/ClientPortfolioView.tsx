@@ -82,13 +82,13 @@ export function ClientPortfolioView({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/70 mb-2">По валютам</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground-2 mb-2">По валютам</p>
           {ccyKeys.map((k) => (
             <Row key={k} label={CCY_NAMES[k] ?? k} ourVal={ourCurrency[k] ?? 0} extVal={externalCurrency[k] ?? 0} grand={grand} baseCurrency={baseCurrency} />
           ))}
         </div>
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/70 mb-2">По классам активов</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground-2 mb-2">По классам активов</p>
           {clsKeys.map((k) => (
             <Row key={k} label={ASSET_CLASS_LABEL[k] ?? k} ourVal={ourClass[k] ?? 0} extVal={externalClass[k] ?? 0} grand={grand} baseCurrency={baseCurrency} />
           ))}

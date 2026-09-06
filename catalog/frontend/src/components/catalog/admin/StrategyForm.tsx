@@ -127,7 +127,7 @@ export function StrategyForm({ initial, isNew }: Props) {
                   deleteMutation.mutate();
                 }
               }}
-              className="inline-flex items-center gap-1 rounded-md border border-rose-300 bg-rose-50 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-100 dark:bg-rose-950 dark:border-rose-900 dark:text-rose-300"
+              className="inline-flex items-center gap-1 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-sm text-destructive hover:bg-destructive/20"
             >
               <Trash2 className="h-4 w-4" /> Деактивировать
             </button>
@@ -149,7 +149,7 @@ export function StrategyForm({ initial, isNew }: Props) {
       </div>
 
       {error && (
-        <div className="rounded-md border border-rose-300 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+        <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive">
           {error}
         </div>
       )}
@@ -311,10 +311,10 @@ function Field({
   return (
     <label className="block space-y-1">
       <span className="block text-xs font-medium text-muted-foreground">
-        {label} {required && <span className="text-rose-600">*</span>}
+        {label} {required && <span className="text-destructive">*</span>}
       </span>
       {children}
-      {hint && <span className="block text-[10px] text-muted-foreground/70">{hint}</span>}
+      {hint && <span className="block text-[11px] text-muted-foreground-2">{hint}</span>}
     </label>
   );
 }

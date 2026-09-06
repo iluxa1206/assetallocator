@@ -40,7 +40,7 @@ export function Logo({
           <span className="text-[15px] font-extrabold tracking-[0.04em] text-foreground">
             SAA
           </span>
-          <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70 mt-1">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground-2 mt-1">
             Strategy Asset Allocation
           </span>
         </span>

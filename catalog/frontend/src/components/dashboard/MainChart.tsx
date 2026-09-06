@@ -225,7 +225,7 @@ export function MainChart({ dates, portfolio, benchmark, cpi, deposit, portfolio
         "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors",
         active
           ? "border-border bg-muted/50 text-foreground"
-          : "border-transparent text-muted-foreground/55 hover:text-foreground hover:bg-muted/30"
+          : "border-transparent text-muted-foreground-2 hover:text-foreground hover:bg-muted/30"
       )}
     >
       <span
@@ -256,7 +256,7 @@ export function MainChart({ dates, portfolio, benchmark, cpi, deposit, portfolio
             onClick={() => setShowDD((v) => !v)}
             className={cn(
               "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors",
-              showDD ? "border-border bg-muted/50 text-foreground" : "border-transparent text-muted-foreground/55 hover:text-foreground hover:bg-muted/30",
+              showDD ? "border-border bg-muted/50 text-foreground" : "border-transparent text-muted-foreground-2 hover:text-foreground hover:bg-muted/30",
             )}
           >
             <span className="h-3 w-3 rounded-sm shrink-0" style={{ background: "color-mix(in oklab, var(--neg) 22%, transparent)", border: "1px solid color-mix(in oklab, var(--neg) 45%, transparent)" }} />

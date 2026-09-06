@@ -103,7 +103,7 @@ function TrackTooltip({ active, payload, label, duLabel, fundLabel, anchorVal }:
           </div>
         )}
       </div>
-      <div className="mt-1.5 text-[10px] text-muted-foreground/60">Клик — выбрать точку отсчёта</div>
+      <div className="mt-1.5 text-[11px] text-muted-foreground-2">Клик — выбрать точку отсчёта</div>
     </div>
   );
 }
@@ -120,7 +120,7 @@ function Chip({ active, onClick, label, swatch }: {
         "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-colors",
         active
           ? "border-border bg-muted/50 text-foreground"
-          : "border-transparent text-muted-foreground/55 hover:text-foreground hover:bg-muted/30",
+          : "border-transparent text-muted-foreground-2 hover:text-foreground hover:bg-muted/30",
         !onClick && "cursor-default",
       )}
     >
@@ -198,7 +198,7 @@ export function TrackChart({ series, window: win, anchor, onAnchor }: Props) {
             active={logScale}
             onClick={() => setLogScale((v) => !v)}
             label="Лог. шкала"
-            swatch={<span className="text-[10px] font-bold leading-none text-muted-foreground">㏒</span>}
+            swatch={<span className="text-[11px] font-bold leading-none text-muted-foreground">㏒</span>}
           />
         </div>
       </div>

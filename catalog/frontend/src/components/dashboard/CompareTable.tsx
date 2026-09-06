@@ -169,7 +169,7 @@ export function CompareTable({ portfolio, benchmark, cpi, deposit, depositTerm =
         </tbody>
       </table>
       </div>
-      <div className="px-4 py-3 border-t border-border/50 text-[11px] text-muted-foreground/70">
+      <div className="px-4 py-3 border-t border-border/50 text-[11px] text-muted-foreground-2">
         Все ряды нормированы к 100 на стартовую дату. Композитный индекс собран из бенчмарков фондов пропорционально их долям. Депозит — реинвестирование с капитализацией каждые {depositTerm} мес по максимальной ставке топ-10 банков (ЦБ РФ). Инфляция — накопленный индекс CPI выбранной базовой валюты.
       </div>
     </div>

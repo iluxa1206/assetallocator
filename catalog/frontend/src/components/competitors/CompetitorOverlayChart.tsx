@@ -82,7 +82,7 @@ export function CompetitorOverlayChart({ rows, height = 360 }: Props) {
 
   if (series.length === 0) {
     return (
-      <div style={{ height }} className="flex items-center justify-center text-sm text-muted-foreground/50">
+      <div style={{ height }} className="flex items-center justify-center text-sm text-muted-foreground-2">
         выберите фонды для сравнения
       </div>
     );
