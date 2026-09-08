@@ -4,6 +4,7 @@ Currently runs:
   - daily CBR deposit-rate refresh at 06:00 UTC
   - daily competitor/benchmark NAV sync at 06:30 UTC
   - weekly own-fund NAV sync, Mondays at 06:45 UTC
+  - daily market-data sync (MOEX indices and FX) at 06:15 UTC
 
 Обе задачи ходят наружу (cbr.ru, iss.moex.com, investfunds.ru). Прод-контейнер
 имеет egress — на это опирается уже работающий CBR-джоб.
@@ -19,6 +20,7 @@ from apscheduler.triggers.cron import CronTrigger
 from app.db.session import async_session_maker
 from app.services.cbr_deposits import upsert_cbr_max_rates
 from app.services.competitor_sync import sync_all_competitors
+from app.services.market_sync import sync_market_data
 from app.services.own_fund_sync import sync_all_own_funds
 
 logger = logging.getLogger(__name__)
@@ -77,6 +79,24 @@ async def _sync_own_funds() -> None:
         logger.exception("Own-fund sync failed: %s", exc)
 
 
+async def _sync_market() -> None:
+    """Индексы и курсы с MOEX до последнего закрытого месяца.
+
+    Стоит раньше синков фондов: ось дат дашборда строится из market_data_points,
+    поэтому свежие котировки без свежих рыночных рядов на дашборде не появятся.
+    """
+    try:
+        async with async_session_maker() as session:
+            written = await sync_market_data(session)
+        logger.info(
+            "Scheduled market sync: %d values across %d series",
+            sum(written.values()),
+            len(written),
+        )
+    except Exception as exc:
+        logger.exception("Market sync failed: %s", exc)
+
+
 def build_scheduler() -> AsyncIOScheduler:
     sched = AsyncIOScheduler(timezone="UTC")
     sched.add_job(
@@ -84,6 +104,15 @@ def build_scheduler() -> AsyncIOScheduler:
         CronTrigger(hour=6, minute=0),
         id="cbr_deposit_refresh",
         replace_existing=True,
+    )
+    sched.add_job(
+        _sync_market,
+        CronTrigger(hour=6, minute=15),
+        id="market_sync",
+        replace_existing=True,
+        misfire_grace_time=3600,
+        coalesce=True,
+        max_instances=1,
     )
     sched.add_job(
         _sync_competitors,
