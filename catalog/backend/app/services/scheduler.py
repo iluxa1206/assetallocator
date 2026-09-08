@@ -3,6 +3,7 @@
 Currently runs:
   - daily CBR deposit-rate refresh at 06:00 UTC
   - daily competitor/benchmark NAV sync at 06:30 UTC
+  - daily own-fund NAV sync at 06:45 UTC
 
 Обе задачи ходят наружу (cbr.ru, iss.moex.com, investfunds.ru). Прод-контейнер
 имеет egress — на это опирается уже работающий CBR-джоб.
@@ -18,6 +19,7 @@ from apscheduler.triggers.cron import CronTrigger
 from app.db.session import async_session_maker
 from app.services.cbr_deposits import upsert_cbr_max_rates
 from app.services.competitor_sync import sync_all_competitors
+from app.services.own_fund_sync import sync_all_own_funds
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +55,26 @@ async def _sync_competitors() -> None:
         logger.exception("Competitor sync failed: %s", exc)
 
 
+async def _sync_own_funds() -> None:
+    """Дотягивает котировки собственных ИПИФ с investfunds.
+
+    Фонды публикуют цену пая раз в месяц, так что почти каждый прогон вставит
+    ноль строк — это норма, дешевле ежедневной проверки ничего нет.
+    """
+    try:
+        async with async_session_maker() as session:
+            result = await sync_all_own_funds(session)
+        inserted = sum(n for n in result.values() if n > 0)
+        failed = [k for k, n in result.items() if n < 0]
+        logger.info(
+            "Scheduled own-fund sync: +%d rows%s",
+            inserted,
+            f", failed: {', '.join(failed)}" if failed else "",
+        )
+    except Exception as exc:
+        logger.exception("Own-fund sync failed: %s", exc)
+
+
 def build_scheduler() -> AsyncIOScheduler:
     sched = AsyncIOScheduler(timezone="UTC")
     sched.add_job(
@@ -68,6 +90,15 @@ def build_scheduler() -> AsyncIOScheduler:
         replace_existing=True,
         # Источники иногда отдают день с задержкой; пропущенный из-за рестарта
         # запуск лучше догнать, чем ждать сутки.
+        misfire_grace_time=3600,
+        coalesce=True,
+        max_instances=1,
+    )
+    sched.add_job(
+        _sync_own_funds,
+        CronTrigger(hour=6, minute=45),
+        id="own_fund_sync",
+        replace_existing=True,
         misfire_grace_time=3600,
         coalesce=True,
         max_instances=1,
