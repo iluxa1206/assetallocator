@@ -141,6 +141,20 @@ export async function syncCompetitors(full = false): Promise<Record<string, numb
   return data;
 }
 
+export interface OwnFundSyncResult {
+  inserted: number;
+  failed: string[];
+  per_fund: Record<string, number>;
+}
+
+/** Ручной синк своих фондов с investfunds (то же, что джоб по понедельникам). */
+export async function syncOwnFunds(full = false): Promise<OwnFundSyncResult> {
+  const { data } = await client.post<OwnFundSyncResult>("/api/v1/funds/sync", null, {
+    params: { full },
+  });
+  return data;
+}
+
 // ──────────────── Fund NAV quotes (admin) ────────────────
 
 export interface FundQuote {

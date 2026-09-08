@@ -7,12 +7,14 @@ import { fetchMe } from "@/lib/api";
 import { UsersTab } from "@/components/admin/UsersTab";
 import { InvitationsTab } from "@/components/admin/InvitationsTab";
 import { ActivityTab } from "@/components/admin/ActivityTab";
+import { DataTab } from "@/components/admin/DataTab";
 import { cn } from "@/lib/utils";
 
 const TABS = [
   { key: "users", label: "Сотрудники" },
   { key: "invitations", label: "Приглашения" },
   { key: "activity", label: "Активность" },
+  { key: "data", label: "Данные" },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -33,7 +35,7 @@ export default function AdminPage() {
       <div>
         <h1 className="text-xl font-extrabold tracking-tight text-foreground">Администрирование</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Доступ сотрудников, приглашения и активность
+          Доступ сотрудников, приглашения, активность и обновление котировок
         </p>
       </div>
 
@@ -58,6 +60,7 @@ export default function AdminPage() {
       {tab === "users" && <UsersTab />}
       {tab === "invitations" && <InvitationsTab />}
       {tab === "activity" && <ActivityTab />}
+      {tab === "data" && <DataTab />}
     </div>
   );
 }
