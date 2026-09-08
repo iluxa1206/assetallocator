@@ -17,6 +17,10 @@
     rucnytr_rub  = rucnytr_cny * cnyrub    (проверено на всей истории)
     rusfar       = капитализация ставки RUSFAR (см. ниже)
 
+Заодно продлевается синтетический фонд денежного рынка Liq: его цена — это и
+есть значение rusfar (total-return индекс), см. scripts/seed_liq.py. Без этого
+Liq остаётся самым отстающим рядом и обрезает ось дат всего дашборда.
+
 **Что остаётся ручным** (источник — ежемесячный xlsx):
     cbonds_zo_rub / cbonds_zo_usd — Cbonds, API платный
     cpi_rub / cpi_usd / cpi_cny   — Росстат
@@ -36,6 +40,7 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.fund import FundQuote
 from app.models.market_data import MarketDataPoint
 
 _UA = "Mozilla/5.0 (compatible; AstraCatalog/1.0)"
@@ -208,6 +213,29 @@ async def sync_market_data(session: AsyncSession, today: date | None = None) -> 
             ).items():
                 by_date[when].rusfar = level
                 written["rusfar"] = written.get("rusfar", 0) + 1
+
+        # Liq — синтетика: цена пая равна значению rusfar. Продлеваем теми же
+        # датами, иначе он останется самым отстающим фондом и обрежет ось дат
+        # (find_valid_dates требует цену по каждому активному фонду).
+        liq_dates = set(
+            (
+                await session.scalars(
+                    select(FundQuote.date).where(FundQuote.fund_key == "Liq")
+                )
+            ).all()
+        )
+        for when, row in sorted(by_date.items()):
+            if row.rusfar is None or when in liq_dates:
+                continue
+            session.add(
+                FundQuote(
+                    fund_key="Liq",
+                    date=when,
+                    price_rub=round(row.rusfar, 6),
+                    price_native=round(row.rusfar, 6),
+                )
+            )
+            written["liq_quotes"] = written.get("liq_quotes", 0) + 1
 
     await session.commit()
     return written
