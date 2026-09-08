@@ -3,7 +3,7 @@
 Currently runs:
   - daily CBR deposit-rate refresh at 06:00 UTC
   - daily competitor/benchmark NAV sync at 06:30 UTC
-  - daily own-fund NAV sync at 06:45 UTC
+  - weekly own-fund NAV sync, Mondays at 06:45 UTC
 
 Обе задачи ходят наружу (cbr.ru, iss.moex.com, investfunds.ru). Прод-контейнер
 имеет egress — на это опирается уже работающий CBR-джоб.
@@ -58,8 +58,10 @@ async def _sync_competitors() -> None:
 async def _sync_own_funds() -> None:
     """Дотягивает котировки собственных ИПИФ с investfunds.
 
-    Фонды публикуют цену пая раз в месяц, так что почти каждый прогон вставит
-    ноль строк — это норма, дешевле ежедневной проверки ничего нет.
+    Раз в неделю, а не ежедневно: фонды публикуют цену пая раз в месяц, и
+    ежедневные 14 запросов (по два на фонд — рубли и валюта) ради одной точки
+    в месяц лишний раз тревожат источник. Недельный шаг всё равно ловит новую
+    точку с запасом — синк инкрементальный, пропущенное догоняется.
     """
     try:
         async with async_session_maker() as session:
@@ -96,7 +98,7 @@ def build_scheduler() -> AsyncIOScheduler:
     )
     sched.add_job(
         _sync_own_funds,
-        CronTrigger(hour=6, minute=45),
+        CronTrigger(day_of_week="mon", hour=6, minute=45),
         id="own_fund_sync",
         replace_existing=True,
         misfire_grace_time=3600,

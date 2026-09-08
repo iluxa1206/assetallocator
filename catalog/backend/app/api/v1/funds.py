@@ -22,8 +22,30 @@ from app.models.market_data import MarketDataPoint
 from app.models.user import User
 from app.schemas.fund import FundCreate, FundOut, FundUpdate
 from app.schemas.fund_quote import BulkUploadResult, FundQuoteIn, FundQuoteOut
+from app.services.own_fund_sync import sync_all_own_funds
 
 router = APIRouter(prefix="/funds", tags=["funds"])
+
+
+@router.post("/sync", status_code=status.HTTP_200_OK)
+async def sync_own(
+    full: bool = Query(False),
+    session: AsyncSession = Depends(get_async_session),
+    _superuser=Depends(current_superuser),
+) -> dict[str, Any]:
+    """Ручной запуск синка своих фондов с investfunds — то же, что делает джоб по понедельникам.
+
+    Возвращает {fund_key: вставлено}; -1 означает ошибку по конкретному фонду,
+    остальные при этом синкаются. `full=true` перезапрашивает всю историю.
+
+    Объявлено ДО маршрутов /{key}, иначе "sync" будет прочитан как ключ фонда.
+    """
+    result = await sync_all_own_funds(session, full=full)
+    return {
+        "inserted": sum(n for n in result.values() if n > 0),
+        "failed": [k for k, n in result.items() if n < 0],
+        "per_fund": result,
+    }
 
 
 # ──────────────── Batch NAV series ────────────────
