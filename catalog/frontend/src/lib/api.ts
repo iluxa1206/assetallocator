@@ -155,6 +155,17 @@ export async function syncOwnFunds(full = false): Promise<OwnFundSyncResult> {
   return data;
 }
 
+export interface MarketSyncResult {
+  written: Record<string, number>;
+  total: number;
+}
+
+/** Ручной синк индексов и курсов с MOEX. */
+export async function syncMarketData(): Promise<MarketSyncResult> {
+  const { data } = await client.post<MarketSyncResult>("/api/v1/market/sync");
+  return data;
+}
+
 // ──────────────── Fund NAV quotes (admin) ────────────────
 
 export interface FundQuote {

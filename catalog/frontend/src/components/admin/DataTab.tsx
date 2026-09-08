@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
-import { syncCompetitors, syncOwnFunds } from "@/lib/api";
+import { syncCompetitors, syncMarketData, syncOwnFunds } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 type Outcome = { ok: boolean; text: string };
@@ -12,6 +12,7 @@ type Outcome = { ok: boolean; text: string };
 export function DataTab() {
   const [ownResult, setOwnResult] = useState<Outcome | null>(null);
   const [compResult, setCompResult] = useState<Outcome | null>(null);
+  const [marketResult, setMarketResult] = useState<Outcome | null>(null);
 
   const own = useMutation({
     mutationFn: () => syncOwnFunds(false),
@@ -42,8 +43,31 @@ export function DataTab() {
     onError: () => setCompResult({ ok: false, text: "Не удалось обновить. Попробуйте позже." }),
   });
 
+  const market = useMutation({
+    mutationFn: () => syncMarketData(),
+    onSuccess: (r) =>
+      setMarketResult({
+        ok: true,
+        text: r.total
+          ? `Записано значений: ${r.total} (${Object.keys(r.written).join(", ")})`
+          : "Новых данных нет — ряды уже актуальны",
+      }),
+    onError: () => setMarketResult({ ok: false, text: "Не удалось обновить. Попробуйте позже." }),
+  });
+
   return (
     <div className="space-y-4">
+      <SyncCard
+        title="Индексы и курсы валют"
+        description="RGBITR, MCFTR, RUCNYTR, золото и курсы USD/CNY с MOEX, плюс индекс денежного рынка из ставки RUSFAR. Автоматически — ежедневно в 06:15 UTC."
+        note="Cbonds ЗО и инфляция (CPI) сюда не входят: источники платные либо ручные, эти ряды по-прежнему из xlsx. От свежести этой таблицы зависит глубина истории на дашборде."
+        busy={market.isPending}
+        result={marketResult}
+        onRun={() => {
+          setMarketResult(null);
+          market.mutate();
+        }}
+      />
       <SyncCard
         title="Котировки своих фондов"
         description="Цена пая с investfunds по семи ИПИФ, в рублях и в валюте фонда. Автоматически — по понедельникам в 06:45 UTC."
